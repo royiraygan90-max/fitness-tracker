@@ -1,1 +1,59 @@
-<!doctype html><html><body>history</body></html>
+{% extends "base.html" %}
+{% block title %}History — Fitness Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">History</h1>
+</div>
+
+<!-- Filter tabs -->
+<div class="filter-tabs">
+  <a href="{{ url_for('history') }}" class="filter-tab {% if filter_type == 'all' %}active{% endif %}">All</a>
+  <a href="{{ url_for('history', type='workout_a') }}" class="filter-tab type-workout_a {% if filter_type == 'workout_a' %}active{% endif %}">💪 Workout A</a>
+  <a href="{{ url_for('history', type='workout_b') }}" class="filter-tab type-workout_b {% if filter_type == 'workout_b' %}active{% endif %}">💪 Workout B</a>
+  <a href="{{ url_for('history', type='poci') }}" class="filter-tab type-poci {% if filter_type == 'poci' %}active{% endif %}">🏐 Poci</a>
+  <a href="{{ url_for('history', type='flexibility') }}" class="filter-tab type-flexibility {% if filter_type == 'flexibility' %}active{% endif %}">🧘 Flexibility</a>
+</div>
+
+{% if workouts %}
+  <div class="history-list">
+    {% for w in workouts %}
+      <div class="glass-card history-card" id="workout-{{ w.id }}">
+        <div class="history-header">
+          <div class="history-meta">
+            <span class="type-badge type-{{ w.type }}">
+              {% if w.type == 'workout_a' %}💪 Workout A
+              {% elif w.type == 'workout_b' %}💪 Workout B
+              {% elif w.type == 'poci' %}🏐 Poci
+              {% else %}🧘 Flexibility{% endif %}
+            </span>
+            <span class="history-date">{{ w.date }}</span>
+          </div>
+          <button class="btn-delete" onclick="confirmDelete({{ w.id }})" aria-label="Delete workout">🗑</button>
+        </div>
+
+        {% if w.exercises %}
+          <div class="exercise-detail-list">
+            {% for ex in w.exercises %}
+              <div class="exercise-detail-row">
+                <span class="ex-detail-name">{{ ex.name }}</span>
+                {% if ex.sets %}<span class="ex-detail-sets">{{ ex.sets }} sets</span>{% endif %}
+                {% if ex.reps %}<span class="ex-detail-reps">{{ ex.reps }}</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if w.notes %}
+          <p class="history-notes">{{ w.notes }}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="glass-card">
+    <p class="empty-state">No workouts found. <a href="{{ url_for('log_workout') }}">Log your first one!</a></p>
+  </div>
+{% endif %}
+
+{% endblock %}
