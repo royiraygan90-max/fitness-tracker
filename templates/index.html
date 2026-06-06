@@ -1,1 +1,101 @@
-<!doctype html><html><body>dashboard</body></html>
+{% extends "base.html" %}
+{% block title %}Dashboard — Fitness Tracker{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h1 class="page-title">Dashboard</h1>
+  <a href="{{ url_for('log_workout') }}" class="btn-primary">+ Log Workout</a>
+</div>
+
+<!-- Stats row -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-value">{{ streak }}</div>
+    <div class="stat-label">Week Streak 🔥</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ week_summary.workouts }}</div>
+    <div class="stat-label">Workouts This Week</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ week_summary.poci }}</div>
+    <div class="stat-label">🏐 Poci Sessions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ week_summary.flexibility }}</div>
+    <div class="stat-label">🧘 Flexibility</div>
+  </div>
+</div>
+
+<!-- Weekly Calendar -->
+<div class="glass-card">
+  <h2 class="card-title">This Week</h2>
+  <div class="week-calendar">
+    {% for day in week_days %}
+    <div class="week-day {% if day.is_today %}today{% endif %} {% if day.workouts %}has-workout{% endif %}">
+      <div class="day-label">{{ day.label }}</div>
+      <div class="day-num">{{ day.day_num }}</div>
+      <div class="day-icons">
+        {% for w in day.workouts %}
+          <span class="type-dot type-{{ w.type }}" title="{{ w.type }}"></span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Activity Heatmap -->
+<div class="glass-card">
+  <h2 class="card-title">Activity (Last 12 Weeks)</h2>
+  <div class="heatmap-wrapper">
+    <div class="heatmap" id="heatmap">
+      {% for week in heatmap %}
+        <div class="heatmap-col">
+          {% for day in week %}
+            <div class="heatmap-cell {% if day.count > 0 and not day.is_future %}active type-{{ day.type }}{% elif day.is_future %}future{% endif %}"
+                 title="{{ day.date }}{% if day.count %} — {{ day.count }} workout(s){% endif %}">
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="heatmap-legend">
+      <span class="legend-item"><span class="legend-dot type-workout_a"></span> Workout A</span>
+      <span class="legend-item"><span class="legend-dot type-workout_b"></span> Workout B</span>
+      <span class="legend-item"><span class="legend-dot type-poci"></span> Poci</span>
+      <span class="legend-item"><span class="legend-dot type-flexibility"></span> Flexibility</span>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Workouts -->
+<div class="glass-card">
+  <h2 class="card-title">Recent Workouts</h2>
+  {% if recent %}
+    <div class="workout-list">
+      {% for w in recent %}
+        <div class="workout-item">
+          <div class="workout-meta">
+            <span class="type-badge type-{{ w.type }}">
+              {% if w.type == 'workout_a' %}💪 Workout A
+              {% elif w.type == 'workout_b' %}💪 Workout B
+              {% elif w.type == 'poci' %}🏐 Poci
+              {% else %}🧘 Flexibility{% endif %}
+            </span>
+            <span class="workout-date">{{ w.date }}</span>
+          </div>
+          {% if w.exercise_count > 0 %}
+            <div class="workout-detail">{{ w.exercise_count }} exercises</div>
+          {% elif w.notes %}
+            <div class="workout-detail">{{ w.notes[:60] }}{% if w.notes|length > 60 %}…{% endif %}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty-state">No workouts yet. <a href="{{ url_for('log_workout') }}">Log your first one!</a></p>
+  {% endif %}
+</div>
+
+{% endblock %}
