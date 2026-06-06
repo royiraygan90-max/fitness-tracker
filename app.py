@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import json
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, g
 
@@ -8,6 +7,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'fitness-tracker-dev-secret')
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
+
+VALID_WORKOUT_TYPES = {'workout_a', 'workout_b', 'poci', 'flexibility'}
 
 WORKOUT_A_EXERCISES = [
     'Pull-up', 'Inverted Row', 'Wide Push-up',
@@ -21,17 +22,25 @@ WORKOUT_B_EXERCISES = [
 
 
 def get_db():
-    if DATABASE_URL == ':memory:':
-        if not hasattr(g, '_db'):
+    if not hasattr(g, '_db'):
+        if DATABASE_URL == ':memory:':
             g._db = sqlite3.connect(':memory:')
             g._db.row_factory = sqlite3.Row
             _create_tables(g._db)
-        return g._db
-    db_path = DATABASE_URL
-    os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else '.', exist_ok=True)
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+        else:
+            db_path = DATABASE_URL
+            os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else '.', exist_ok=True)
+            g._db = sqlite3.connect(db_path)
+            g._db.row_factory = sqlite3.Row
+            g._db.execute('PRAGMA foreign_keys = ON')
+    return g._db
+
+
+@app.teardown_appcontext
+def close_db(error):
+    db = g.pop('_db', None)
+    if db is not None:
+        db.close()
 
 
 def _create_tables(conn):
@@ -154,8 +163,6 @@ def dashboard():
     # Heatmap: last 12 weeks
     heatmap = _build_heatmap(db, today)
 
-    if DATABASE_URL != ':memory:':
-        db.close()
     return render_template('index.html',
         recent=recent, week_days=week_days, week_summary=week_summary,
         streak=streak, heatmap=heatmap, today=today)
@@ -225,6 +232,9 @@ def _build_heatmap(db, today):
 def log_workout():
     if request.method == 'POST':
         workout_type = request.form.get('workout_type')
+        if not workout_type or workout_type not in VALID_WORKOUT_TYPES:
+            flash('Invalid workout type.', 'error')
+            return redirect(url_for('log_workout'))
         workout_date = request.form.get('date', str(date.today()))
         notes = request.form.get('notes', '')
 
@@ -250,8 +260,6 @@ def log_workout():
                 )
 
         db.commit()
-        if DATABASE_URL != ':memory:':
-            db.close()
         flash('Workout logged successfully!', 'success')
         return redirect(url_for('dashboard'))
 
@@ -291,8 +299,6 @@ def history():
         w['exercises'] = exercises
         workouts.append(w)
 
-    if DATABASE_URL != ':memory:':
-        db.close()
     return render_template('history.html', workouts=workouts, filter_type=filter_type)
 
 
@@ -302,8 +308,6 @@ def delete_workout(workout_id):
     db.execute('DELETE FROM workout_exercises WHERE workout_id = ?', (workout_id,))
     db.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
     db.commit()
-    if DATABASE_URL != ':memory:':
-        db.close()
     return jsonify({'success': True})
 
 

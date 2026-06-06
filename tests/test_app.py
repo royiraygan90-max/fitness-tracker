@@ -1,6 +1,6 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-import tempfile, pytest
+import pytest
 os.environ['DATABASE_URL'] = ':memory:'
 
 import app as flask_app
