@@ -32,7 +32,7 @@ def get_db():
             os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else '.', exist_ok=True)
             g._db = sqlite3.connect(db_path)
             g._db.row_factory = sqlite3.Row
-            g._db.execute('PRAGMA foreign_keys = ON')
+        g._db.execute('PRAGMA foreign_keys = ON')
     return g._db
 
 
