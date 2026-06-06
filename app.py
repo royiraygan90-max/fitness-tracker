@@ -26,13 +26,15 @@ def get_db():
         if DATABASE_URL == ':memory:':
             g._db = sqlite3.connect(':memory:')
             g._db.row_factory = sqlite3.Row
-            _create_tables(g._db)
         else:
             db_path = DATABASE_URL
             os.makedirs(os.path.dirname(db_path) if os.path.dirname(db_path) else '.', exist_ok=True)
             g._db = sqlite3.connect(db_path)
             g._db.row_factory = sqlite3.Row
         g._db.execute('PRAGMA foreign_keys = ON')
+        _create_tables(g._db)
+        if DATABASE_URL != ':memory:':
+            _seed_sample_data(g._db)
     return g._db
 
 
