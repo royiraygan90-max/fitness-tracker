@@ -90,3 +90,62 @@ def test_delete_workout(client):
     import json
     data = json.loads(r.data)
     assert data['success'] is True
+
+def test_previous_workout_none(client):
+    import json
+    r = client.get('/api/workouts/previous/workout_a')
+    assert r.status_code == 200
+    data = json.loads(r.data)
+    assert data == {'previous': None}
+
+def test_previous_workout_invalid_type(client):
+    r = client.get('/api/workouts/previous/poci')
+    assert r.status_code == 400
+
+def test_previous_workout_returns_last(client):
+    import json
+    # Log an older workout_a
+    client.post('/log/live',
+        data=json.dumps({
+            'workout_type': 'workout_a',
+            'date': '2026-01-01',
+            'exercises': [{'name': 'Pull-up', 'sets': 3, 'reps': '7,7,6', 'weights': '8,8,8'}]
+        }),
+        content_type='application/json')
+    # Log a more recent workout_a
+    client.post('/log/live',
+        data=json.dumps({
+            'workout_type': 'workout_a',
+            'date': '2026-01-05',
+            'exercises': [{'name': 'Pull-up', 'sets': 3, 'reps': '8,8,7', 'weights': '10,10,10'}]
+        }),
+        content_type='application/json')
+    r = client.get('/api/workouts/previous/workout_a')
+    assert r.status_code == 200
+    data = json.loads(r.data)
+    assert data['date'] == '2026-01-05'
+    assert len(data['exercises']) == 1
+    ex = data['exercises'][0]
+    assert ex['name'] == 'Pull-up'
+    assert ex['reps'] == ['8', '8', '7']
+    assert ex['weights'] == ['10', '10', '10']
+
+def test_log_live_with_weights(client):
+    import json
+    payload = {
+        'workout_type': 'workout_a',
+        'date': '2026-06-08',
+        'exercises': [
+            {'name': 'Pull-up', 'sets': 3, 'reps': '8,8,7', 'weights': '10,10,10'}
+        ]
+    }
+    r = client.post('/log/live',
+        data=json.dumps(payload),
+        content_type='application/json')
+    assert r.status_code == 200
+    data = json.loads(r.data)
+    assert data['success'] is True
+    # Verify weights were stored via the previous-workout endpoint
+    r2 = client.get('/api/workouts/previous/workout_a')
+    data2 = json.loads(r2.data)
+    assert data2['exercises'][0]['weights'] == ['10', '10', '10']
