@@ -333,7 +333,7 @@ def history():
 
     query = '''
         SELECT w.id, w.date, w.type, w.notes, w.created_at,
-               GROUP_CONCAT(we.exercise_name || '|' || COALESCE(we.sets,'') || '|' || COALESCE(we.reps,''), ';;') as exercises_raw
+               GROUP_CONCAT(we.exercise_name || '|' || COALESCE(we.sets,'') || '|' || COALESCE(we.reps,'') || '|' || COALESCE(we.weight_kg,''), ';;') as exercises_raw
         FROM workouts w
         LEFT JOIN workout_exercises we ON we.workout_id = w.id
     '''
@@ -351,8 +351,13 @@ def history():
         if w['exercises_raw']:
             for ex_str in w['exercises_raw'].split(';;'):
                 parts = ex_str.split('|')
-                if len(parts) == 3:
-                    exercises.append({'name': parts[0], 'sets': parts[1], 'reps': parts[2]})
+                if len(parts) >= 3:
+                    exercises.append({
+                        'name': parts[0],
+                        'sets': parts[1],
+                        'reps': parts[2],
+                        'weight_kg': parts[3] if len(parts) > 3 else '',
+                    })
         w['exercises'] = exercises
         workouts.append(w)
 

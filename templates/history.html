@@ -38,7 +38,7 @@
               <div class="exercise-detail-row">
                 <span class="ex-detail-name">{{ ex.name }}</span>
                 {% if ex.sets %}<span class="ex-detail-sets">{{ ex.sets }} sets</span>{% endif %}
-                {% if ex.reps %}<span class="ex-detail-reps">{{ ex.reps }}</span>{% endif %}
+                {% if ex.reps %}<span class="ex-detail-reps">{% if ex.weight_kg %}{{ ex.reps.split(',')[0] }} reps × {{ ex.weight_kg.split(',')[0] }} kg{% else %}{{ ex.reps }}{% endif %}</span>{% endif %}
               </div>
             {% endfor %}
           </div>
