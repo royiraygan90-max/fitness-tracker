@@ -2,47 +2,87 @@
 {% block title %}{{ "Workout A" if workout_type == "workout_a" else "Workout B" }} — Live{% endblock %}
 {% block content %}
 
-<div class="glass-card lw-header">
-  <h1 class="lw-title">{{ "Workout A 💪" if workout_type == "workout_a" else "Workout B 💪" }}</h1>
-  <div class="lw-progress-text">Exercise <span id="ex-num">1</span> of <span id="ex-total">{{ exercises | length }}</span></div>
-  <div class="lw-progress-bar">
-    <div class="lw-progress-fill" id="progress-fill" style="width:0%"></div>
+<div id="warmup-section">
+  <div class="glass-card lw-header">
+    <h1 class="lw-title">Warmup</h1>
+    <div class="lw-progress-text" id="warmup-progress">1 / 7</div>
+    <div class="lw-progress-bar">
+      <div class="lw-progress-fill" id="warmup-progress-fill" style="width:0%"></div>
+    </div>
   </div>
-  <div class="lw-sets-remaining" id="sets-remaining"></div>
-</div>
-
-<div class="glass-card lw-exercise-card">
-  <h2 class="lw-ex-name" id="ex-name"></h2>
-  <div class="lw-ex-target" id="ex-target"></div>
-  <div class="lw-tip-box" id="ex-tip"></div>
-  <a class="lw-yt-btn" id="ex-youtube" href="#" target="_blank" rel="noopener noreferrer">🎥 Watch on YouTube</a>
-</div>
-
-<div class="glass-card lw-sets-card">
-  <div class="card-title">Sets</div>
-  <div class="lw-last-summary" id="ex-last" style="display:none"></div>
-  <div id="sets-container"></div>
-  <div class="lw-timer" id="rest-timer" title="Tap to dismiss">
-    <span id="timer-text">Rest: 1:00</span>
-    <span class="lw-timer-dismiss">tap to dismiss</span>
+  <div class="glass-card lw-warmup-card">
+    <h2 class="lw-ex-name" id="warmup-name"></h2>
+    <div class="lw-ex-target" id="warmup-desc"></div>
+    <div class="lw-warmup-display" id="warmup-timer-display" style="display:none">
+      <span class="lw-warmup-count" id="warmup-timer-text">0:30</span>
+    </div>
+    <div class="lw-warmup-display" id="warmup-reps-display" style="display:none">
+      <span class="lw-warmup-count lw-warmup-count-reps" id="warmup-reps-text">10</span>
+      <span class="lw-warmup-reps-label">reps</span>
+    </div>
+  </div>
+  <div class="lw-nav">
+    <button class="btn-secondary lw-warmup-skip" id="warmup-skip">Skip Warmup</button>
+    <button class="btn-primary" id="warmup-next" style="display:none">Next →</button>
   </div>
 </div>
 
-<div class="lw-nav">
-  <button class="btn-secondary" id="btn-prev" disabled>← Previous</button>
-  <button class="btn-primary" id="btn-next" disabled>Next Exercise →</button>
+<div id="workout-section" style="display:none">
+  <div class="glass-card lw-header">
+    <h1 class="lw-title">{{ "Workout A 💪" if workout_type == "workout_a" else "Workout B 💪" }}</h1>
+    <div class="lw-progress-text">Exercise <span id="ex-num">1</span> of <span id="ex-total">{{ exercises | length }}</span></div>
+    <div class="lw-progress-bar">
+      <div class="lw-progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="lw-sets-remaining" id="sets-remaining"></div>
+  </div>
+
+  <div class="glass-card lw-exercise-card">
+    <h2 class="lw-ex-name" id="ex-name"></h2>
+    <div class="lw-ex-target" id="ex-target"></div>
+    <div class="lw-tip-box" id="ex-tip"></div>
+    <a class="lw-yt-btn" id="ex-youtube" href="#" target="_blank" rel="noopener noreferrer">🎥 Watch on YouTube</a>
+  </div>
+
+  <div class="glass-card lw-sets-card">
+    <div class="card-title">Sets</div>
+    <div class="lw-last-summary" id="ex-last" style="display:none"></div>
+    <div id="sets-container"></div>
+    <div class="lw-timer" id="rest-timer" title="Tap to dismiss">
+      <span id="timer-text">Rest: 1:00</span>
+      <span class="lw-timer-dismiss">tap to dismiss</span>
+    </div>
+  </div>
+
+  <div class="lw-nav">
+    <button class="btn-secondary" id="btn-prev" disabled>← Previous</button>
+    <button class="btn-primary" id="btn-next" disabled>Next Exercise →</button>
+  </div>
 </div>
 
 <script>
 const WORKOUT_TYPE = {{ workout_type | tojson }};
 const TODAY = {{ today | tojson }};
 const EXERCISES = {{ exercises | tojson }};
+const WARMUP_ITEMS = [
+  { name: 'Arm Circles', desc: 'Forward + backward', type: 'timed', duration: 30 },
+  { name: 'Shoulder Rotations', desc: 'Scapular prep', type: 'timed', duration: 30 },
+  { name: 'Hip Circles', desc: 'Full hip mobility', type: 'timed', duration: 30 },
+  { name: 'Leg Swings', desc: 'Forward / back, both legs', type: 'timed', duration: 30 },
+  { name: 'Bodyweight Squat', desc: 'Slow and controlled', type: 'reps', reps: 10 },
+  { name: 'Dead Hang / Scapular Shrug', desc: 'Shoulder joint prep', type: 'timed', duration: 20 },
+  { name: 'Inchworm', desc: 'Hamstrings → plank → push-up → stand', type: 'reps', reps: 4 },
+];
 
+// ===== WARMUP STATE =====
+let warmupIdx = 0;
+let warmupTimerInterval = null;
+
+// ===== WORKOUT STATE =====
 let currentIdx = 0;
 const state = EXERCISES.map(function(ex) {
   return {sets: Array.from({length: ex.sets}, function() { return {checked: false, reps: '', weight: ''}; })};
 });
-
 let timerInterval = null;
 let timerSeconds = 0;
 let previousData = {};
@@ -53,9 +93,86 @@ fetch('/api/workouts/previous/' + WORKOUT_TYPE)
     if (data && data.exercises) {
       data.exercises.forEach(function(ex) { previousData[ex.name] = ex; });
     }
-    renderExercise();
   })
   .catch(function() {});
+
+// ===== WARMUP FUNCTIONS =====
+
+function stopWarmupTimer() {
+  if (warmupTimerInterval) { clearInterval(warmupTimerInterval); warmupTimerInterval = null; }
+}
+
+function renderWarmup() {
+  const item = WARMUP_ITEMS[warmupIdx];
+  document.getElementById('warmup-progress').textContent = (warmupIdx + 1) + ' / ' + WARMUP_ITEMS.length;
+  document.getElementById('warmup-progress-fill').style.width = ((warmupIdx / WARMUP_ITEMS.length) * 100) + '%';
+  document.getElementById('warmup-name').textContent = item.name;
+  document.getElementById('warmup-name').className = 'lw-ex-name';
+  document.getElementById('warmup-desc').textContent = item.desc;
+
+  const timerDisplay = document.getElementById('warmup-timer-display');
+  const repsDisplay = document.getElementById('warmup-reps-display');
+  const nextBtn = document.getElementById('warmup-next');
+
+  stopWarmupTimer();
+
+  if (item.type === 'timed') {
+    timerDisplay.style.display = 'block';
+    repsDisplay.style.display = 'none';
+    nextBtn.style.display = 'none';
+    let secs = item.duration;
+    document.getElementById('warmup-timer-text').textContent = formatTime(secs);
+    warmupTimerInterval = setInterval(function() {
+      secs--;
+      document.getElementById('warmup-timer-text').textContent = formatTime(secs);
+      if (secs <= 0) {
+        stopWarmupTimer();
+        advanceWarmup();
+      }
+    }, 1000);
+  } else {
+    timerDisplay.style.display = 'none';
+    repsDisplay.style.display = 'block';
+    document.getElementById('warmup-reps-text').textContent = item.reps;
+    nextBtn.style.display = 'flex';
+    nextBtn.textContent = warmupIdx === WARMUP_ITEMS.length - 1 ? 'Done ✓' : 'Next →';
+  }
+}
+
+function advanceWarmup() {
+  stopWarmupTimer();
+  if (warmupIdx < WARMUP_ITEMS.length - 1) {
+    warmupIdx++;
+    renderWarmup();
+  } else {
+    showWarmupComplete();
+  }
+}
+
+function showWarmupComplete() {
+  document.getElementById('warmup-name').textContent = 'Warmup Complete ✓';
+  document.getElementById('warmup-name').className = 'lw-ex-name lw-warmup-complete';
+  document.getElementById('warmup-desc').textContent = '';
+  document.getElementById('warmup-timer-display').style.display = 'none';
+  document.getElementById('warmup-reps-display').style.display = 'none';
+  document.getElementById('warmup-next').style.display = 'none';
+  document.getElementById('warmup-skip').style.display = 'none';
+  document.getElementById('warmup-progress-fill').style.width = '100%';
+  document.getElementById('warmup-progress').textContent = WARMUP_ITEMS.length + ' / ' + WARMUP_ITEMS.length;
+  setTimeout(startWorkout, 1500);
+}
+
+function startWorkout() {
+  stopWarmupTimer();
+  document.getElementById('warmup-section').style.display = 'none';
+  document.getElementById('workout-section').style.display = 'block';
+  renderExercise();
+}
+
+document.getElementById('warmup-next').addEventListener('click', advanceWarmup);
+document.getElementById('warmup-skip').addEventListener('click', startWorkout);
+
+// ===== WORKOUT FUNCTIONS =====
 
 function getTotalSetsRemaining() {
   let total = 0;
@@ -251,6 +368,6 @@ function finishWorkout() {
   });
 }
 
-renderExercise();
+renderWarmup();
 </script>
 {% endblock %}
