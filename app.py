@@ -79,6 +79,7 @@ def get_db():
             g._db.row_factory = sqlite3.Row
         g._db.execute('PRAGMA foreign_keys = ON')
         _create_tables(g._db)
+        _migrate_db(g._db)
         if DATABASE_URL != ':memory:':
             _seed_sample_data(g._db)
     return g._db
@@ -106,10 +107,18 @@ def _create_tables(conn):
             exercise_name TEXT NOT NULL,
             sets INTEGER,
             reps TEXT,
+            weight_kg TEXT,
             completed BOOLEAN DEFAULT 1
         );
     ''')
     conn.commit()
+
+
+def _migrate_db(conn):
+    cols = [row[1] for row in conn.execute('PRAGMA table_info(workout_exercises)').fetchall()]
+    if 'weight_kg' not in cols:
+        conn.execute('ALTER TABLE workout_exercises ADD COLUMN weight_kg TEXT')
+        conn.commit()
 
 
 def init_db():
