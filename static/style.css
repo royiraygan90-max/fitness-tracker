@@ -381,6 +381,23 @@ a:hover { color: var(--accent-hover); }
 .lw-reps-input:focus { outline: none; border-color: var(--accent); }
 .lw-reps-input::placeholder { color: var(--text-muted); font-size: 0.78rem; }
 
+.lw-weight-input {
+  width: 70px; padding: 0.4rem 0.5rem; text-align: center;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 0.9rem;
+}
+.lw-weight-input:focus { outline: none; border-color: var(--accent); }
+.lw-weight-input::placeholder { color: var(--text-muted); font-size: 0.78rem; }
+
+.lw-weight-unit {
+  font-size: 0.82rem; color: var(--text-muted); flex-shrink: 0;
+}
+
+.lw-last-summary {
+  font-size: 0.8rem; color: var(--text-muted);
+  margin-bottom: 0.75rem; letter-spacing: 0.03em;
+}
+
 .lw-timer {
   display: none; align-items: center; justify-content: center; gap: 0.75rem;
   margin-top: 0.75rem; padding: 0.75rem; border-radius: var(--radius-sm);
