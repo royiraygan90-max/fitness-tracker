@@ -20,6 +20,52 @@ WORKOUT_B_EXERCISES = [
     'Standing Calf Raise', 'Single-Leg Calf Raise', 'Lateral Raise', 'Shrugs'
 ]
 
+LIVE_WORKOUT_EXERCISES = {
+    'workout_a': [
+        {'name': 'Pull-up', 'sets': 3, 'reps': '5–10',
+         'youtube': 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
+         'tip': "Start from dead hang. Pull shoulder blades DOWN first before pulling up. Drive elbows toward back pockets."},
+        {'name': 'Inverted Row', 'sets': 3, 'reps': '10–12',
+         'youtube': 'https://www.youtube.com/watch?v=LR0yiMqS5DI',
+         'tip': "Keep body in a straight line from head to heels. Squeeze shoulder blades together at the top."},
+        {'name': 'Wide Push-up', 'sets': 3, 'reps': '10–12',
+         'youtube': 'https://www.youtube.com/watch?v=IODxDxX7oi4',
+         'tip': "Keep core tight, don't let hips sag. Lower chest all the way to the floor."},
+        {'name': 'Face Pull (band)', 'sets': 3, 'reps': '15',
+         'youtube': 'https://www.youtube.com/watch?v=rep-qVOkqgk',
+         'tip': "Pull to eye level, not chin. Keep elbows high throughout the movement."},
+        {'name': 'Plank', 'sets': 3, 'reps': '40 sec',
+         'youtube': 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
+         'tip': "Squeeze glutes and abs together. Don't hold your breath."},
+        {'name': 'Hanging Knee Raise', 'sets': 3, 'reps': '12',
+         'youtube': 'https://www.youtube.com/watch?v=Pr1ieGZ5atk',
+         'tip': "No swinging. Control the lowering phase slowly."},
+    ],
+    'workout_b': [
+        {'name': 'Squat (dumbbell)', 'sets': 3, 'reps': '10–12',
+         'youtube': 'https://www.youtube.com/watch?v=ultWZbUMPL8',
+         'tip': "Chest up, knees track over toes. Sit back like into a chair."},
+        {'name': 'Romanian Deadlift', 'sets': 3, 'reps': '10–12',
+         'youtube': 'https://www.youtube.com/watch?v=JCXUYuzwNrM',
+         'tip': "Hinge at hips, push butt back. Keep dumbbells close to legs. Stop when you feel hamstring stretch."},
+        {'name': 'Bulgarian Split Squat', 'sets': 3, 'reps': '8 each leg',
+         'youtube': 'https://www.youtube.com/watch?v=2C-uNgKwPLE',
+         'tip': "Front foot far enough forward. Keep torso upright, don't lean forward."},
+        {'name': 'Standing Calf Raise', 'sets': 4, 'reps': '15–20',
+         'youtube': 'https://www.youtube.com/watch?v=gwLzBJYoWlI',
+         'tip': "Full range — all the way up AND all the way down. Pause 1 second at the top."},
+        {'name': 'Single-Leg Calf Raise', 'sets': 3, 'reps': '12 each leg',
+         'youtube': 'https://www.youtube.com/watch?v=SjPkUNVvmE0',
+         'tip': "Hold something for balance only. Same full range as Standing Calf Raise."},
+        {'name': 'Lateral Raise', 'sets': 3, 'reps': '12–15',
+         'youtube': 'https://www.youtube.com/watch?v=3VcKaXpzqRo',
+         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher."},
+        {'name': 'Shrugs', 'sets': 3, 'reps': '15',
+         'youtube': 'https://www.youtube.com/watch?v=cJRVVxmytaM',
+         'tip': "Straight up and down only. Never roll shoulders — it causes injury."},
+    ],
+}
+
 
 def get_db():
     if not hasattr(g, '_db'):
@@ -311,6 +357,56 @@ def delete_workout(workout_id):
     db.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
     db.commit()
     return jsonify({'success': True})
+
+
+@app.route('/workout/live/<workout_type>')
+def live_workout(workout_type):
+    if workout_type not in ('workout_a', 'workout_b'):
+        return redirect(url_for('dashboard'))
+    exercises = LIVE_WORKOUT_EXERCISES[workout_type]
+    return render_template('live_workout.html',
+        workout_type=workout_type,
+        exercises=exercises,
+        today=str(date.today()))
+
+
+@app.route('/log/live', methods=['POST'])
+def log_live():
+    data = request.get_json(silent=True) or {}
+    workout_type = data.get('workout_type')
+    if not workout_type or workout_type not in VALID_WORKOUT_TYPES:
+        return jsonify({'error': 'Invalid workout type'}), 400
+    workout_date = data.get('date', str(date.today()))
+    exercises = data.get('exercises', [])
+    if not isinstance(exercises, list):
+        return jsonify({'error': 'Invalid exercises'}), 400
+
+    db = get_db()
+    cur = db.execute(
+        'INSERT INTO workouts (date, type, notes, created_at) VALUES (?,?,?,?)',
+        (workout_date, workout_type, 'Live workout', datetime.now().isoformat())
+    )
+    workout_id = cur.lastrowid
+
+    for ex in exercises:
+        if not isinstance(ex, dict):
+            continue
+        name = str(ex.get('name', ''))[:200]
+        if not name:
+            continue
+        try:
+            sets_int = int(ex.get('sets', 0))
+        except (TypeError, ValueError):
+            sets_int = 0
+        reps_val = str(ex.get('reps', ''))[:200]
+        db.execute(
+            'INSERT INTO workout_exercises (workout_id, exercise_name, sets, reps, completed) VALUES (?,?,?,?,1)',
+            (workout_id, name, sets_int, reps_val)
+        )
+
+    db.commit()
+    flash('Workout logged successfully!', 'success')
+    return jsonify({'success': True, 'redirect': url_for('dashboard')})
 
 
 if __name__ == '__main__':

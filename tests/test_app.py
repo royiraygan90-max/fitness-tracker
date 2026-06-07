@@ -47,6 +47,33 @@ def test_log_workout_a_post(client):
     }, follow_redirects=True)
     assert r.status_code == 200
 
+def test_live_workout_page_loads(client):
+    r = client.get('/workout/live/workout_a')
+    assert r.status_code == 200
+    r = client.get('/workout/live/workout_b')
+    assert r.status_code == 200
+
+def test_live_workout_invalid_type_redirects(client):
+    r = client.get('/workout/live/invalid')
+    assert r.status_code == 302
+
+def test_log_live_post(client):
+    import json
+    payload = {
+        'workout_type': 'workout_a',
+        'date': '2026-06-07',
+        'exercises': [
+            {'name': 'Pull-up', 'sets': 3, 'reps': '8,8,7'},
+            {'name': 'Plank', 'sets': 3, 'reps': '40 sec,40 sec,40 sec'},
+        ]
+    }
+    r = client.post('/log/live',
+        data=json.dumps(payload),
+        content_type='application/json')
+    assert r.status_code == 200
+    data = json.loads(r.data)
+    assert data['success'] is True
+
 def test_delete_workout(client):
     # Create a workout first
     client.post('/log', data={

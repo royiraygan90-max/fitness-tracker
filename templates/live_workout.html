@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ "Workout A" if workout_type == "workout_a" else "Workout B" }} — Live{% endblock %}
+{% block content %}
+
+<div class="glass-card lw-header">
+  <h1 class="lw-title">{{ "Workout A 💪" if workout_type == "workout_a" else "Workout B 💪" }}</h1>
+  <div class="lw-progress-text">Exercise <span id="ex-num">1</span> of <span id="ex-total">{{ exercises | length }}</span></div>
+  <div class="lw-progress-bar">
+    <div class="lw-progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+  <div class="lw-sets-remaining" id="sets-remaining"></div>
+</div>
+
+<div class="glass-card lw-exercise-card">
+  <h2 class="lw-ex-name" id="ex-name"></h2>
+  <div class="lw-ex-target" id="ex-target"></div>
+  <div class="lw-tip-box" id="ex-tip"></div>
+  <a class="lw-yt-btn" id="ex-youtube" href="#" target="_blank" rel="noopener noreferrer">🎥 Watch on YouTube</a>
+</div>
+
+<div class="glass-card lw-sets-card">
+  <div class="card-title">Sets</div>
+  <div id="sets-container"></div>
+  <div class="lw-timer" id="rest-timer" title="Tap to dismiss">
+    <span id="timer-text">Rest: 1:00</span>
+    <span class="lw-timer-dismiss">tap to dismiss</span>
+  </div>
+</div>
+
+<div class="lw-nav">
+  <button class="btn-secondary" id="btn-prev" disabled>← Previous</button>
+  <button class="btn-primary" id="btn-next" disabled>Next Exercise →</button>
+</div>
+
+<script>
+const WORKOUT_TYPE = {{ workout_type | tojson }};
+const TODAY = {{ today | tojson }};
+const EXERCISES = {{ exercises | tojson }};
+
+let currentIdx = 0;
+const state = EXERCISES.map(function(ex) {
+  return {sets: Array.from({length: ex.sets}, function() { return {checked: false, reps: ''}; })};
+});
+
+let timerInterval = null;
+let timerSeconds = 0;
+
+function getTotalSetsRemaining() {
+  let total = 0;
+  state.forEach(function(ex) { ex.sets.forEach(function(s) { if (!s.checked) total++; }); });
+  return total;
+}
+
+function formatTime(s) {
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function stopRestTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  const el = document.getElementById('rest-timer');
+  el.style.display = 'none';
+  el.classList.remove('ready');
+}
+
+function startRestTimer() {
+  stopRestTimer();
+  timerSeconds = 60;
+  const timerEl = document.getElementById('rest-timer');
+  const timerText = document.getElementById('timer-text');
+  timerEl.style.display = 'flex';
+  timerText.textContent = 'Rest: ' + formatTime(timerSeconds);
+  timerInterval = setInterval(function() {
+    timerSeconds--;
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerEl.classList.add('ready');
+      timerText.textContent = 'Ready! ✓';
+    } else {
+      timerText.textContent = 'Rest: ' + formatTime(timerSeconds);
+    }
+  }, 1000);
+}
+
+function updateNav() {
+  const nextBtn = document.getElementById('btn-next');
+  const isLast = currentIdx === EXERCISES.length - 1;
+  const hasChecked = state[currentIdx].sets.some(function(s) { return s.checked; });
+  document.getElementById('btn-prev').disabled = currentIdx === 0;
+  nextBtn.disabled = !hasChecked;
+  nextBtn.textContent = isLast ? '✓ Finish Workout' : 'Next Exercise →';
+}
+
+function renderExercise() {
+  const ex = EXERCISES[currentIdx];
+  const exState = state[currentIdx];
+
+  document.getElementById('ex-num').textContent = currentIdx + 1;
+  document.getElementById('progress-fill').style.width = ((currentIdx / EXERCISES.length) * 100) + '%';
+  document.getElementById('sets-remaining').textContent = getTotalSetsRemaining() + ' sets remaining';
+  document.getElementById('ex-name').textContent = ex.name;
+  document.getElementById('ex-target').textContent = ex.sets + ' sets × ' + ex.reps + ' reps';
+  document.getElementById('ex-tip').textContent = ex.tip;
+  document.getElementById('ex-youtube').href = ex.youtube;
+
+  const container = document.getElementById('sets-container');
+  container.innerHTML = '';
+  exState.sets.forEach(function(setData, setIdx) {
+    const row = document.createElement('div');
+    row.className = 'lw-set-row' + (setData.checked ? ' done' : '');
+
+    const label = document.createElement('label');
+    label.className = 'lw-set-label';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = setData.checked;
+
+    const mark = document.createElement('span');
+    mark.className = 'lw-set-checkmark';
+
+    const numSpan = document.createElement('span');
+    numSpan.className = 'lw-set-num';
+    numSpan.textContent = 'Set ' + (setIdx + 1);
+
+    label.appendChild(cb);
+    label.appendChild(mark);
+    label.appendChild(numSpan);
+
+    const repsInput = document.createElement('input');
+    repsInput.type = 'number';
+    repsInput.className = 'lw-reps-input';
+    repsInput.placeholder = ex.reps;
+    repsInput.value = setData.reps;
+    repsInput.min = '0';
+    repsInput.setAttribute('aria-label', 'Reps for set ' + (setIdx + 1));
+
+    cb.addEventListener('change', function() {
+      setData.checked = cb.checked;
+      setData.reps = repsInput.value;
+      row.classList.toggle('done', cb.checked);
+      if (cb.checked) startRestTimer();
+      updateNav();
+      document.getElementById('sets-remaining').textContent = getTotalSetsRemaining() + ' sets remaining';
+    });
+
+    repsInput.addEventListener('input', function() { setData.reps = repsInput.value; });
+
+    row.appendChild(label);
+    row.appendChild(repsInput);
+    container.appendChild(row);
+  });
+
+  stopRestTimer();
+  updateNav();
+}
+
+document.getElementById('btn-prev').addEventListener('click', function() {
+  if (currentIdx > 0) { currentIdx--; renderExercise(); }
+});
+
+document.getElementById('btn-next').addEventListener('click', function() {
+  if (currentIdx < EXERCISES.length - 1) {
+    currentIdx++;
+    renderExercise();
+  } else {
+    finishWorkout();
+  }
+});
+
+document.getElementById('rest-timer').addEventListener('click', stopRestTimer);
+
+function finishWorkout() {
+  const exercises = [];
+  EXERCISES.forEach(function(ex, i) {
+    const checked = state[i].sets.filter(function(s) { return s.checked; });
+    if (checked.length === 0) return;
+    exercises.push({
+      name: ex.name,
+      sets: checked.length,
+      reps: checked.map(function(s) { return s.reps || ex.reps; }).join(',')
+    });
+  });
+
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.disabled = true;
+  nextBtn.textContent = 'Saving…';
+
+  fetch('/log/live', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({workout_type: WORKOUT_TYPE, date: TODAY, exercises: exercises})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      window.location.href = data.redirect;
+    } else {
+      alert('Failed to save workout. Please try again.');
+      nextBtn.disabled = false;
+      nextBtn.textContent = '✓ Finish Workout';
+    }
+  })
+  .catch(function() {
+    alert('Network error. Please try again.');
+    nextBtn.disabled = false;
+    nextBtn.textContent = '✓ Finish Workout';
+  });
+}
+
+renderExercise();
+</script>
+{% endblock %}

@@ -4,7 +4,11 @@
 
 <div class="page-header">
   <h1 class="page-title">Dashboard</h1>
-  <a href="{{ url_for('log_workout') }}" class="btn-primary">+ Log Workout</a>
+  <div class="header-actions">
+    <a href="{{ url_for('log_workout') }}" class="btn-primary">+ Log Workout</a>
+    <a href="{{ url_for('live_workout', workout_type='workout_a') }}" class="btn-start-a">▶ Start Workout A</a>
+    <a href="{{ url_for('live_workout', workout_type='workout_b') }}" class="btn-start-b">▶ Start Workout B</a>
+  </div>
 </div>
 
 <!-- Stats row -->
