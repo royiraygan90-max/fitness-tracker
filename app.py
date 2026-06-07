@@ -386,7 +386,7 @@ def previous_workout(workout_type):
     exercises = []
     for ex in exercise_rows:
         reps_list = [r.strip() for r in ex['reps'].split(',')] if ex['reps'] else []
-        weights_list = [w.strip() for w in ex['weight_kg'].split(',')] if ex['weight_kg'] else []
+        weights_list = [w.strip() for w in (ex['weight_kg'] or '').split(',')] if ex['weight_kg'] else []
         exercises.append({
             'name': ex['exercise_name'],
             'sets': ex['sets'],
@@ -440,9 +440,10 @@ def log_live():
         except (TypeError, ValueError):
             sets_int = 0
         reps_val = str(ex.get('reps', ''))[:200]
+        weights_val = str(ex.get('weights', '')).strip()[:200] or None
         db.execute(
-            'INSERT INTO workout_exercises (workout_id, exercise_name, sets, reps, completed) VALUES (?,?,?,?,1)',
-            (workout_id, name, sets_int, reps_val)
+            'INSERT INTO workout_exercises (workout_id, exercise_name, sets, reps, weight_kg, completed) VALUES (?,?,?,?,?,1)',
+            (workout_id, name, sets_int, reps_val, weights_val)
         )
 
     db.commit()

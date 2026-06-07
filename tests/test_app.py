@@ -12,7 +12,7 @@ def client():
     with flask_app.app.test_client() as client:
         with flask_app.app.app_context():
             flask_app.init_db()
-        yield client
+            yield client
 
 def test_dashboard_loads(client):
     r = client.get('/')
