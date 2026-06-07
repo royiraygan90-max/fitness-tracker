@@ -368,6 +368,38 @@ def delete_workout(workout_id):
     return jsonify({'success': True})
 
 
+@app.route('/api/workouts/previous/<workout_type>')
+def previous_workout(workout_type):
+    if workout_type not in ('workout_a', 'workout_b'):
+        return jsonify({'error': 'Invalid workout type'}), 400
+    db = get_db()
+    row = db.execute(
+        'SELECT id, date FROM workouts WHERE type = ? ORDER BY date DESC, created_at DESC LIMIT 1',
+        (workout_type,)
+    ).fetchone()
+    if not row:
+        return jsonify({'previous': None})
+    exercise_rows = db.execute(
+        'SELECT exercise_name, sets, reps, weight_kg FROM workout_exercises WHERE workout_id = ?',
+        (row['id'],)
+    ).fetchall()
+    exercises = []
+    for ex in exercise_rows:
+        reps_list = [r.strip() for r in ex['reps'].split(',')] if ex['reps'] else []
+        weights_list = [w.strip() for w in ex['weight_kg'].split(',')] if ex['weight_kg'] else []
+        exercises.append({
+            'name': ex['exercise_name'],
+            'sets': ex['sets'],
+            'reps': reps_list,
+            'weights': weights_list,
+        })
+    return jsonify({
+        'workout_type': workout_type,
+        'date': row['date'],
+        'exercises': exercises,
+    })
+
+
 @app.route('/workout/live/<workout_type>')
 def live_workout(workout_type):
     if workout_type not in ('workout_a', 'workout_b'):
