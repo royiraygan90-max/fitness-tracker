@@ -124,6 +124,7 @@ def test_previous_workout_returns_last(client):
     assert r.status_code == 200
     data = json.loads(r.data)
     assert data['date'] == '2026-01-05'
+    assert data['workout_type'] == 'workout_a'
     assert len(data['exercises']) == 1
     ex = data['exercises'][0]
     assert ex['name'] == 'Pull-up'
@@ -148,4 +149,7 @@ def test_log_live_with_weights(client):
     # Verify weights were stored via the previous-workout endpoint
     r2 = client.get('/api/workouts/previous/workout_a')
     data2 = json.loads(r2.data)
-    assert data2['exercises'][0]['weights'] == ['10', '10', '10']
+    assert len(data2['exercises']) == 1
+    ex2 = data2['exercises'][0]
+    assert ex2['name'] == 'Pull-up'
+    assert ex2['weights'] == ['10', '10', '10']
