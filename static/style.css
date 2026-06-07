@@ -414,6 +414,19 @@ a:hover { color: var(--accent-hover); }
 }
 .lw-nav button:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; pointer-events: none; }
 
+/* ===== WARMUP SCREEN ===== */
+.lw-warmup-card { text-align: center; padding: 2rem 1.25rem; }
+.lw-warmup-display { margin-top: 1.25rem; }
+.lw-warmup-count {
+  display: block; font-size: 4.5rem; font-weight: 700;
+  color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums;
+}
+.lw-warmup-count-reps { color: #22c55e; }
+.lw-warmup-reps-label { display: block; font-size: 1.1rem; color: var(--text-muted); margin-top: 0.4rem; }
+.lw-warmup-complete { color: #22c55e !important; }
+.lw-warmup-skip { font-size: 0.82rem; padding: 0.5rem 0.875rem; opacity: 0.7; }
+.lw-warmup-skip:hover { opacity: 1; }
+
 /* ===== MOBILE ===== */
 @media (max-width: 600px) {
   .stats-row { grid-template-columns: repeat(2, 1fr); }
