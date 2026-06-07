@@ -77,6 +77,7 @@ const WARMUP_ITEMS = [
 // ===== WARMUP STATE =====
 let warmupIdx = 0;
 let warmupTimerInterval = null;
+let workoutStarted = false;
 
 // ===== WORKOUT STATE =====
 let currentIdx = 0;
@@ -163,6 +164,8 @@ function showWarmupComplete() {
 }
 
 function startWorkout() {
+  if (workoutStarted) return;
+  workoutStarted = true;
   stopWarmupTimer();
   document.getElementById('warmup-section').style.display = 'none';
   document.getElementById('workout-section').style.display = 'block';
