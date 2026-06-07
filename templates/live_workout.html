@@ -20,6 +20,7 @@
 
 <div class="glass-card lw-sets-card">
   <div class="card-title">Sets</div>
+  <div class="lw-last-summary" id="ex-last" style="display:none"></div>
   <div id="sets-container"></div>
   <div class="lw-timer" id="rest-timer" title="Tap to dismiss">
     <span id="timer-text">Rest: 1:00</span>
@@ -39,11 +40,22 @@ const EXERCISES = {{ exercises | tojson }};
 
 let currentIdx = 0;
 const state = EXERCISES.map(function(ex) {
-  return {sets: Array.from({length: ex.sets}, function() { return {checked: false, reps: ''}; })};
+  return {sets: Array.from({length: ex.sets}, function() { return {checked: false, reps: '', weight: ''}; })};
 });
 
 let timerInterval = null;
 let timerSeconds = 0;
+let previousData = {};
+
+fetch('/api/workouts/previous/' + WORKOUT_TYPE)
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data.exercises) {
+      data.exercises.forEach(function(ex) { previousData[ex.name] = ex; });
+    }
+    renderExercise();
+  })
+  .catch(function() {});
 
 function getTotalSetsRemaining() {
   let total = 0;
@@ -103,6 +115,19 @@ function renderExercise() {
   document.getElementById('ex-tip').textContent = ex.tip;
   document.getElementById('ex-youtube').href = ex.youtube;
 
+  const lastEl = document.getElementById('ex-last');
+  const prev = previousData[ex.name];
+  if (prev && prev.reps && prev.reps.length > 0) {
+    let lastText = 'LAST: ' + prev.sets + ' × ' + prev.reps[0];
+    if (prev.weights && prev.weights.length > 0 && prev.weights[0]) {
+      lastText += ' @ ' + prev.weights[0] + ' kg';
+    }
+    lastEl.textContent = lastText;
+    lastEl.style.display = 'block';
+  } else {
+    lastEl.style.display = 'none';
+  }
+
   const container = document.getElementById('sets-container');
   container.innerHTML = '';
   exState.sets.forEach(function(setData, setIdx) {
@@ -135,9 +160,23 @@ function renderExercise() {
     repsInput.min = '0';
     repsInput.setAttribute('aria-label', 'Reps for set ' + (setIdx + 1));
 
+    const weightInput = document.createElement('input');
+    weightInput.type = 'number';
+    weightInput.className = 'lw-weight-input';
+    weightInput.placeholder = 'ק"ג';
+    weightInput.value = setData.weight;
+    weightInput.min = '0';
+    weightInput.step = '0.5';
+    weightInput.setAttribute('aria-label', 'Weight for set ' + (setIdx + 1));
+
+    const weightUnit = document.createElement('span');
+    weightUnit.className = 'lw-weight-unit';
+    weightUnit.textContent = 'ק"ג';
+
     cb.addEventListener('change', function() {
       setData.checked = cb.checked;
       setData.reps = repsInput.value;
+      setData.weight = weightInput.value;
       row.classList.toggle('done', cb.checked);
       if (cb.checked) startRestTimer();
       updateNav();
@@ -145,9 +184,12 @@ function renderExercise() {
     });
 
     repsInput.addEventListener('input', function() { setData.reps = repsInput.value; });
+    weightInput.addEventListener('input', function() { setData.weight = weightInput.value; });
 
     row.appendChild(label);
     row.appendChild(repsInput);
+    row.appendChild(weightInput);
+    row.appendChild(weightUnit);
     container.appendChild(row);
   });
 
@@ -178,7 +220,8 @@ function finishWorkout() {
     exercises.push({
       name: ex.name,
       sets: checked.length,
-      reps: checked.map(function(s) { return s.reps || ex.reps; }).join(',')
+      reps: checked.map(function(s) { return s.reps || ex.reps; }).join(','),
+      weights: checked.map(function(s) { return s.weight || ''; }).join(',')
     });
   });
 
