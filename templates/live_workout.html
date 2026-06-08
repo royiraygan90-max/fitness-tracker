@@ -2,6 +2,36 @@
 {% block title %}{{ "Workout A" if workout_type == "workout_a" else "Workout B" }} — Live{% endblock %}
 {% block content %}
 
+<style>
+.resume-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.78);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+.resume-card {
+  max-width: 380px; width: 90%; text-align: center; padding: 2.5rem 2rem;
+}
+.resume-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.resume-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+.resume-subtitle { color: var(--text-secondary, #aaa); margin-bottom: 0.75rem; }
+.resume-meta { font-size: 0.9rem; color: var(--text-secondary, #aaa); margin-bottom: 1.75rem; }
+.resume-actions { display: flex; gap: 1rem; justify-content: center; }
+</style>
+
+<div id="resume-overlay" class="resume-overlay" style="display:none">
+  <div class="resume-card glass-card">
+    <div class="resume-icon">💪</div>
+    <h2 class="resume-title">Continue Workout?</h2>
+    <p class="resume-subtitle">You have an unfinished <strong id="resume-wtype"></strong> in progress</p>
+    <div class="resume-meta" id="resume-meta"></div>
+    <div class="resume-actions">
+      <button class="btn-primary" id="resume-continue">▶ Continue</button>
+      <button class="btn-secondary" id="resume-new">Start Fresh</button>
+    </div>
+  </div>
+</div>
+
 <div id="warmup-section">
   <div class="glass-card lw-header">
     <h1 class="lw-title">Warmup</h1>
@@ -88,6 +118,40 @@ let timerInterval = null;
 let timerSeconds = 0;
 let previousData = {};
 
+// ===== SESSION PERSISTENCE =====
+
+function saveSession() {
+  const session = {
+    workout_type: WORKOUT_TYPE,
+    phase: workoutStarted ? 'workout' : 'warmup',
+    warmupIdx,
+    currentIdx,
+    state,
+    timerSecondsRemaining: timerInterval ? timerSeconds : 0,
+    savedAt: Date.now()
+  };
+  localStorage.setItem('lw_session', JSON.stringify(session));
+}
+
+function clearSession() {
+  localStorage.removeItem('lw_session');
+}
+
+function checkForSavedSession() {
+  const raw = localStorage.getItem('lw_session');
+  if (!raw) return false;
+  try {
+    const session = JSON.parse(raw);
+    if (session.workout_type !== WORKOUT_TYPE) return false;
+    if (Date.now() - session.savedAt > 6 * 60 * 60 * 1000) { clearSession(); return false; }
+    return session;
+  } catch { return false; }
+}
+
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden' && workoutStarted) saveSession();
+});
+
 fetch('/api/workouts/previous/' + WORKOUT_TYPE)
   .then(function(r) { return r.json(); })
   .then(function(data) {
@@ -145,6 +209,7 @@ function advanceWarmup() {
   if (warmupIdx < WARMUP_ITEMS.length - 1) {
     warmupIdx++;
     renderWarmup();
+    saveSession();
   } else {
     showWarmupComplete();
   }
@@ -170,6 +235,7 @@ function startWorkout() {
   document.getElementById('warmup-section').style.display = 'none';
   document.getElementById('workout-section').style.display = 'block';
   renderExercise();
+  saveSession();
 }
 
 document.getElementById('warmup-next').addEventListener('click', advanceWarmup);
@@ -194,9 +260,9 @@ function stopRestTimer() {
   el.classList.remove('ready');
 }
 
-function startRestTimer() {
+function startRestTimerFrom(seconds) {
   stopRestTimer();
-  timerSeconds = 60;
+  timerSeconds = seconds;
   const timerEl = document.getElementById('rest-timer');
   const timerText = document.getElementById('timer-text');
   timerEl.style.display = 'flex';
@@ -212,6 +278,10 @@ function startRestTimer() {
       timerText.textContent = 'Rest: ' + formatTime(timerSeconds);
     }
   }, 1000);
+}
+
+function startRestTimer() {
+  startRestTimerFrom(60);
 }
 
 function updateNav() {
@@ -301,10 +371,11 @@ function renderExercise() {
       if (cb.checked) startRestTimer();
       updateNav();
       document.getElementById('sets-remaining').textContent = getTotalSetsRemaining() + ' sets remaining';
+      saveSession();
     });
 
-    repsInput.addEventListener('input', function() { setData.reps = repsInput.value; });
-    weightInput.addEventListener('input', function() { setData.weight = weightInput.value; });
+    repsInput.addEventListener('input', function() { setData.reps = repsInput.value; saveSession(); });
+    weightInput.addEventListener('input', function() { setData.weight = weightInput.value; saveSession(); });
 
     row.appendChild(label);
     row.appendChild(repsInput);
@@ -318,13 +389,14 @@ function renderExercise() {
 }
 
 document.getElementById('btn-prev').addEventListener('click', function() {
-  if (currentIdx > 0) { currentIdx--; renderExercise(); }
+  if (currentIdx > 0) { currentIdx--; renderExercise(); saveSession(); }
 });
 
 document.getElementById('btn-next').addEventListener('click', function() {
   if (currentIdx < EXERCISES.length - 1) {
     currentIdx++;
     renderExercise();
+    saveSession();
   } else {
     finishWorkout();
   }
@@ -357,6 +429,7 @@ function finishWorkout() {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.success) {
+      clearSession();
       window.location.href = data.redirect;
     } else {
       alert('Failed to save workout. Please try again.');
@@ -371,6 +444,64 @@ function finishWorkout() {
   });
 }
 
-renderWarmup();
+function showResumeOverlay(session) {
+  const overlay = document.getElementById('resume-overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('resume-wtype').textContent =
+    session.workout_type === 'workout_a' ? 'Workout A' : 'Workout B';
+
+  let meta = '';
+  if (session.phase === 'workout') {
+    const setsLeft = session.state.reduce(function(acc, ex) {
+      return acc + ex.sets.filter(function(s) { return !s.checked; }).length;
+    }, 0);
+    meta = 'Exercise ' + (session.currentIdx + 1) + ' of ' + EXERCISES.length + ' · ' + setsLeft + ' sets remaining';
+  } else {
+    meta = 'Warmup step ' + (session.warmupIdx + 1) + ' of 7';
+  }
+  document.getElementById('resume-meta').textContent = meta;
+
+  document.getElementById('resume-continue').onclick = function() { restoreSession(session); };
+  document.getElementById('resume-new').onclick = function() {
+    clearSession();
+    overlay.style.display = 'none';
+    renderWarmup();
+  };
+}
+
+function restoreSession(session) {
+  warmupIdx = session.warmupIdx;
+  currentIdx = session.currentIdx;
+
+  session.state.forEach(function(exState, i) {
+    if (!state[i]) return;
+    exState.sets.forEach(function(s, j) {
+      if (state[i].sets[j]) {
+        state[i].sets[j].checked = s.checked;
+        state[i].sets[j].reps    = s.reps;
+        state[i].sets[j].weight  = s.weight;
+      }
+    });
+  });
+
+  document.getElementById('resume-overlay').style.display = 'none';
+
+  if (session.phase === 'workout') {
+    workoutStarted = true;
+    document.getElementById('warmup-section').style.display = 'none';
+    document.getElementById('workout-section').style.display = 'block';
+    renderExercise();
+    if (session.timerSecondsRemaining > 0) startRestTimerFrom(session.timerSecondsRemaining);
+  } else {
+    renderWarmup();
+  }
+}
+
+const savedSession = checkForSavedSession();
+if (savedSession) {
+  showResumeOverlay(savedSession);
+} else {
+  renderWarmup();
+}
 </script>
 {% endblock %}
