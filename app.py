@@ -6,6 +6,16 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, f
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'fitness-tracker-dev-secret')
 
+@app.template_filter('format_date')
+def format_date_filter(value):
+    if not value:
+        return value
+    try:
+        dt = datetime.strptime(str(value), '%Y-%m-%d')
+        return dt.strftime('%d/%m/%y')
+    except (ValueError, TypeError):
+        return value
+
 DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 
 VALID_WORKOUT_TYPES = {'workout_a', 'workout_b', 'poci', 'flexibility'}

@@ -27,7 +27,7 @@
               {% elif w.type == 'poci' %}🏐 Poci
               {% else %}🧘 Flexibility{% endif %}
             </span>
-            <span class="history-date">{{ w.date }}</span>
+            <span class="history-date">{{ w.date | format_date }}</span>
           </div>
           <button class="btn-delete" onclick="confirmDelete({{ w.id }})" aria-label="Delete workout">🗑</button>
         </div>

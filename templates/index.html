@@ -87,7 +87,7 @@
               {% elif w.type == 'poci' %}🏐 Poci
               {% else %}🧘 Flexibility{% endif %}
             </span>
-            <span class="workout-date">{{ w.date }}</span>
+            <span class="workout-date">{{ w.date | format_date }}</span>
           </div>
           {% if w.exercise_count > 0 %}
             <div class="workout-detail">{{ w.exercise_count }} exercises</div>
