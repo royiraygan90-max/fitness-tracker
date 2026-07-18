@@ -20,11 +20,6 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 
 VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'poci', 'flexibility'}
 
-# Legacy pre-gym/home-split types. Kept only so old logged workouts still
-# display correctly (see LEGACY_WORKOUT_TYPES usage below) — nothing new is
-# ever written with these types.
-LEGACY_WORKOUT_TYPES = ('workout_a', 'workout_b')
-
 WORKOUT_A_GYM_EXERCISES = [
     'Squat', 'Bench Press', 'Pull-up',
     'Lateral Raise', 'Cable Bicep Curl', 'Lower Back (Superman)'
@@ -125,83 +120,32 @@ WORKOUT_TYPE_LABELS = {
     'workout_a': 'Workout A (legacy)', 'workout_b': 'Workout B (legacy)',
 }
 REST_SECONDS_DEFAULT = 90
-WEEKDAY_LETTERS_EN = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-FUNCTIONAL_WORKOUTS = {
-    'A': {
-        'name': 'Workout A', 'est_min': 35,
-        'exercises': [
-            {'id': 'a1', 'name': 'Goblet Squat (Dumbbell)', 'target_sets': 3, 'target_reps': '12–15',
-             'cue': 'Elbows brush your knees at the bottom, drive up through mid-foot.'},
-            {'id': 'a2', 'name': 'Dumbbell Deadlift', 'target_sets': 3, 'target_reps': '8–10',
-             'cue': 'Flat back, hinge from the hips, keep the dumbbells close to your shins.'},
-            {'id': 'a3', 'name': 'Step-Up (Dumbbell)', 'target_sets': 3, 'target_reps': '10/leg',
-             'cue': 'Drive through the lead heel, control the descent.'},
-            {'id': 'a4', 'name': 'Overhead Press (Dumbbell)', 'target_sets': 3, 'target_reps': '8–10',
-             'cue': 'Ribs down, press straight up, brace your core.'},
-            {'id': 'a5', 'name': 'Single-Arm Row (Dumbbell)', 'target_sets': 3, 'target_reps': '10/side',
-             'cue': 'Flat back, pull your elbow past your hip, pause at the top.'},
-            {'id': 'a6', 'name': 'Floor Press (Dumbbell)', 'target_sets': 3, 'target_reps': '10–12',
-             'cue': 'Elbows at 45°, pause briefly on the floor each rep.'},
-            {'id': 'a7', 'name': 'Hammer Curl (Dumbbell)', 'target_sets': 3, 'target_reps': '12',
-             'cue': 'Elbows pinned, no swinging — control the negative.'},
-        ],
-    },
-    'B': {
-        'name': 'Workout B', 'est_min': 40,
-        'exercises': [
-            {'id': 'b1', 'name': 'Squat (Dumbbell)', 'target_sets': 3, 'target_reps': '10–12',
-             'cue': 'Chest up, knees track over toes — sit back like into a chair.'},
-            {'id': 'b2', 'name': 'Romanian Deadlift (Dumbbell)', 'target_sets': 3, 'target_reps': '10–12',
-             'cue': 'Soft knees, hinge at the hips, keep the dumbbells close to your shins.'},
-            {'id': 'b3', 'name': 'Walking Lunge (Dumbbell)', 'target_sets': 3, 'target_reps': '12/leg',
-             'cue': 'Long stride, drop the back knee straight down, drive through the front heel.'},
-            {'id': 'b4', 'name': 'Push Press (Dumbbell)', 'target_sets': 3, 'target_reps': '8–10',
-             'cue': 'Dip, drive, punch through — let your legs do the work.'},
-            {'id': 'b5', 'name': 'Bent-Over Row (Dumbbell)', 'target_sets': 3, 'target_reps': '10–12',
-             'cue': 'Flat back, pull to the hip, squeeze at the top.'},
-            {'id': 'b6', 'name': 'Floor Chest Press (Dumbbell)', 'target_sets': 3, 'target_reps': '10–12',
-             'cue': 'Elbows at 45°, press up and slightly in over the chest.'},
-            {'id': 'b7', 'name': 'Renegade Row (Dumbbell)', 'target_sets': 3, 'target_reps': '8/side',
-             'cue': 'Wide stance, minimize hip rotation, row without twisting.'},
-        ],
-    },
-    'C': {
-        'name': 'Workout C', 'est_min': 38,
-        'exercises': [
-            {'id': 'c1', 'name': 'Front Squat (Dumbbell)', 'target_sets': 3, 'target_reps': '8–10',
-             'cue': 'Elbows high, core braced, sit straight down between your hips.'},
-            {'id': 'c2', 'name': 'Single-Leg RDL (Dumbbell)', 'target_sets': 3, 'target_reps': '10/leg',
-             'cue': 'Hips square, reach long, soft bend in the standing knee.'},
-            {'id': 'c3', 'name': 'Reverse Lunge (Dumbbell)', 'target_sets': 3, 'target_reps': '10/leg',
-             'cue': 'Step back light on the toe, drop straight down.'},
-            {'id': 'c4', 'name': 'Arnold Press (Dumbbell)', 'target_sets': 3, 'target_reps': '8–10',
-             'cue': 'Rotate through the bottom, press up and out.'},
-            {'id': 'c5', 'name': 'Chest-Supported Row (Dumbbell)', 'target_sets': 3, 'target_reps': '10–12',
-             'cue': 'Chest pinned to the bench, squeeze the shoulder blades.'},
-            {'id': 'c6', 'name': 'Incline Press (Dumbbell)', 'target_sets': 3, 'target_reps': '10–12',
-             'cue': '45° bench, press up and slightly back, control the descent.'},
-            {'id': 'c7', 'name': 'Lateral Raise (Dumbbell)', 'target_sets': 3, 'target_reps': '12',
-             'cue': 'Soft elbows, lead with the elbows, stop at shoulder height.'},
-        ],
-    },
-}
+# The Home/Plan/History app's live-tracking content — derived from
+# LIVE_WORKOUT_EXERCISES so there's a single source of truth for exercise
+# names/sets/reps/cues, shared with the /workout/live/<type> legacy flow.
+# No fixed weekly schedule: Workout A and B are always startable, and
+# gym vs. home is chosen when the user starts a session, not baked into a day.
+def _build_ab_workouts():
+    out = {}
+    for key, exercises in LIVE_WORKOUT_EXERCISES.items():
+        out[key] = {
+            'label': WORKOUT_TYPE_LABELS[key],
+            'exercises': [
+                {
+                    'id': f'{key}_{i}',
+                    'name': ex['name'],
+                    'target_sets': ex['sets'],
+                    'target_reps': ex['reps'],
+                    'cue': ex['tip'],
+                }
+                for i, ex in enumerate(exercises)
+            ],
+        }
+    return out
 
-YOGA_SESSIONS = {
-    'yoga1': {'title': 'Flow & Breath', 'coach': 'Coach Maya · YouTube', 'est_min': 30, 'focus': ['Mobility', 'Breathwork']},
-    'yoga2': {'title': 'Hips & Backbends', 'coach': 'Coach Maya · YouTube', 'est_min': 32, 'focus': ['Hips', 'Backbend']},
-}
 
-# Repeating weekly cycle, index 0=Sun .. 6=Sat
-WEEKLY_PLAN = [
-    {'type': 'rest'},
-    {'type': 'functional', 'workout_key': 'A'},
-    {'type': 'yoga', 'yoga_key': 'yoga1'},
-    {'type': 'rest'},
-    {'type': 'functional', 'workout_key': 'B'},
-    {'type': 'yoga', 'yoga_key': 'yoga2'},
-    {'type': 'functional', 'workout_key': 'C'},
-]
+AB_WORKOUTS = _build_ab_workouts()
 
 
 def get_db():
@@ -219,7 +163,7 @@ def get_db():
         _migrate_db(g._db)
         if DATABASE_URL != ':memory:':
             _seed_sample_data(g._db)
-            _seed_new_sessions(g._db)
+            _purge_stale_mockup_sessions(g._db)
     return g._db
 
 
@@ -293,7 +237,7 @@ def init_db():
     conn.row_factory = sqlite3.Row
     _create_tables(conn)
     _seed_sample_data(conn)
-    _seed_new_sessions(conn)
+    _purge_stale_mockup_sessions(conn)
     conn.close()
 
 
@@ -331,79 +275,25 @@ def _seed_sample_data(conn):
     conn.commit()
 
 
-def _seed_new_sessions(conn):
-    """Seed sample functional/yoga session history so the new Home/Plan/History
-    screens aren't empty on a fresh install. No-ops once real sessions exist."""
-    count = conn.execute('SELECT COUNT(*) FROM sessions').fetchone()[0]
-    if count > 0:
+def _purge_stale_mockup_sessions(conn):
+    """One-time cleanup: the first version of the redesigned app seeded
+    sessions/session_sets with placeholder content from the Claude Design
+    mockup (workout_key 'A'/'B'/'C', generic yoga templates). That content
+    is being replaced with the user's real Workout A/B gym/home program, so
+    wipe it once. Detected via the old single-letter workout_key values,
+    which the current schema (workout_a_gym, etc.) never produces — once
+    purged, this is permanently a no-op."""
+    stale = conn.execute("SELECT 1 FROM sessions WHERE workout_key IN ('A','B','C') LIMIT 1").fetchone()
+    if not stale:
         return
-    today = date.today()
-
-    def add_functional(days_ago, workout_key, duration_min, sets_by_exercise, pr_exercise_id=None):
-        d = str(today - timedelta(days=days_ago))
-        cur = conn.execute(
-            'INSERT INTO sessions (date, session_type, workout_key, duration_sec, pr_count, created_at) VALUES (?,?,?,?,?,?)',
-            (d, 'functional', workout_key, duration_min * 60, 1 if pr_exercise_id else 0, datetime.now().isoformat())
-        )
-        sid = cur.lastrowid
-        names = {ex['id']: ex['name'] for ex in FUNCTIONAL_WORKOUTS[workout_key]['exercises']}
-        for ex_id, sets in sets_by_exercise.items():
-            for i, (weight, reps) in enumerate(sets):
-                is_pr = 1 if (pr_exercise_id == ex_id and i == 0) else 0
-                conn.execute(
-                    'INSERT INTO session_sets (session_id, exercise_id, exercise_name, set_index, weight, reps, is_pr) '
-                    'VALUES (?,?,?,?,?,?,?)',
-                    (sid, ex_id, names[ex_id], i, weight, reps, is_pr)
-                )
-
-    def add_yoga(days_ago, yoga_key, duration_min, notes):
-        d = str(today - timedelta(days=days_ago))
-        conn.execute(
-            'INSERT INTO sessions (date, session_type, yoga_key, duration_sec, notes, created_at) VALUES (?,?,?,?,?,?)',
-            (d, 'yoga', yoga_key, duration_min * 60, notes, datetime.now().isoformat())
-        )
-
-    add_functional(1, 'C', 37, {
-        'c1': [(22, 9), (22, 9), (22, 8)], 'c2': [(12, 10), (12, 10), (12, 9)],
-        'c3': [(16, 10), (16, 10), (16, 10)], 'c4': [(12, 9), (12, 9), (12, 8)],
-        'c5': [(18, 11), (18, 11), (18, 10)], 'c6': [(18, 10), (18, 10), (16, 12)],
-        'c7': [(8, 12), (8, 12), (8, 12)],
-    }, pr_exercise_id='c1')
-    add_yoga(2, 'yoga2', 32, 'Deep pigeon variations today, still tight on the left hip. Backbends felt easier than last week.')
-    add_functional(4, 'B', 41, {
-        'b1': [(22, 12), (22, 12), (22, 11)], 'b2': [(20, 10), (20, 10), (20, 10)],
-        'b3': [(14, 12), (14, 12), (12, 12)], 'b4': [(16, 9), (16, 8), (14, 10)],
-        'b5': [(20, 11), (20, 11), (18, 12)], 'b6': [(20, 11), (18, 12), (18, 12)],
-        'b7': [(12, 8), (12, 8), (10, 10)],
-    }, pr_exercise_id='b1')
-    add_yoga(6, 'yoga1', 29, 'Slower pace today, focused on breath timing through the sun salutations.')
-    add_functional(8, 'A', 34, {
-        'a1': [(18, 14), (18, 14), (18, 13)], 'a2': [(24, 9), (24, 9), (24, 8)],
-        'a3': [(12, 10), (12, 10), (12, 10)], 'a4': [(14, 9), (14, 8), (12, 10)],
-        'a5': [(20, 10), (20, 10), (20, 10)], 'a6': [(18, 11), (18, 11), (16, 12)],
-        'a7': [(10, 12), (10, 12), (10, 12)],
-    })
-    add_functional(11, 'B', 39, {
-        'b1': [(20, 12), (20, 12), (20, 10)], 'b2': [(18, 11), (18, 11), (18, 10)],
-        'b3': [(12, 12), (12, 12), (12, 12)], 'b4': [(14, 10), (14, 9), (12, 10)],
-        'b5': [(18, 12), (18, 11), (16, 12)], 'b6': [(18, 11), (16, 12), (16, 12)],
-        'b7': [(10, 8), (10, 8), (10, 8)],
-    })
-    # Older Workout B sessions kept minimal — only here to give the squat
-    # progress chart 5 data points of depth.
-    add_functional(18, 'B', 40, {'b1': [(20, 11), (20, 11), (20, 10)]})
-    add_functional(25, 'B', 40, {'b1': [(18, 12), (18, 11), (18, 10)]})
-    add_functional(32, 'B', 40, {'b1': [(16, 12), (16, 12), (16, 11)]})
-
-    conn.execute('INSERT INTO exercise_notes (exercise_id, note) VALUES (?,?)',
-                 ('b1', 'Felt strong — ready to add weight next time.'))
-    conn.execute('INSERT INTO exercise_notes (exercise_id, note) VALUES (?,?)',
-                 ('a2', 'Grip was the limiter, not legs.'))
+    conn.execute('DELETE FROM session_sets')
+    conn.execute('DELETE FROM sessions')
+    conn.execute('DELETE FROM exercise_notes')
     conn.commit()
 
 
 def _weekday_sun0(d):
-    """Weekday index with Sun=0..Sat=6, matching WEEKLY_PLAN order."""
+    """Weekday index with Sun=0..Sat=6."""
     return (d.weekday() + 1) % 7
 
 
@@ -423,40 +313,24 @@ def _fmt_rel_date(d, today):
     return d.strftime('%b') + ' ' + str(d.day)
 
 
-_FUNCTIONAL_LEGACY_TYPES = LEGACY_WORKOUT_TYPES + tuple(VALID_WORKOUT_TYPES - {'poci', 'flexibility'})
-
-
-def _day_has_matching_session(db, d, plan_type):
+def _day_has_any_session(db, d):
     ds = str(d)
-    if plan_type == 'functional':
-        if db.execute("SELECT 1 FROM sessions WHERE date=? AND session_type='functional' LIMIT 1", (ds,)).fetchone():
-            return True
-        placeholders = ','.join('?' * len(_FUNCTIONAL_LEGACY_TYPES))
-        return db.execute(
-            f"SELECT 1 FROM workouts WHERE date=? AND type IN ({placeholders}) LIMIT 1",
-            (ds,) + _FUNCTIONAL_LEGACY_TYPES
-        ).fetchone() is not None
-    if plan_type == 'yoga':
-        if db.execute("SELECT 1 FROM sessions WHERE date=? AND session_type='yoga' LIMIT 1", (ds,)).fetchone():
-            return True
-        return db.execute(
-            "SELECT 1 FROM workouts WHERE date=? AND type='flexibility' LIMIT 1", (ds,)
-        ).fetchone() is not None
-    return False
+    if db.execute("SELECT 1 FROM sessions WHERE date=? LIMIT 1", (ds,)).fetchone():
+        return True
+    return db.execute("SELECT 1 FROM workouts WHERE date=? LIMIT 1", (ds,)).fetchone() is not None
 
 
 def _calc_day_streak(db, today):
-    """Consecutive scheduled training days completed, walking back from today.
-    Rest days don't count for or against it; today doesn't break it if unfinished."""
+    """Consecutive days (walking back from today) with at least one logged
+    session of any kind — no fixed weekly schedule to match against anymore.
+    Today doesn't break the streak if nothing's logged yet."""
     streak = 0
     d = today
     for _ in range(365):
-        plan_type = WEEKLY_PLAN[_weekday_sun0(d)]['type']
-        if plan_type != 'rest':
-            if _day_has_matching_session(db, d, plan_type):
-                streak += 1
-            elif d != today:
-                break
+        if _day_has_any_session(db, d):
+            streak += 1
+        elif d != today:
+            break
         d -= timedelta(days=1)
     return streak
 
@@ -503,43 +377,6 @@ def _format_legacy_exercise_line(name, sets, reps, weight_kg):
     return reps or ((str(sets) + ' sets') if sets else '—')
 
 
-def _plan_detail_for_day(db, d, plan, is_today, is_past):
-    ptype = plan['type']
-    if ptype == 'functional':
-        w = FUNCTIONAL_WORKOUTS[plan['workout_key']]
-        status = 'Completed' if (is_past and _day_has_matching_session(db, d, 'functional')) else \
-            ('Missed' if is_past else ('Scheduled' if not is_today else ''))
-        names = [ex['name'].replace(' (Dumbbell)', '') for ex in w['exercises']]
-        preview = ' · '.join(names[:3]) + (' +' + str(len(names) - 3) + ' more' if len(names) > 3 else '')
-        return {
-            'type': 'functional', 'workoutKey': plan['workout_key'], 'accent': FUNCTIONAL_COLOR,
-            'eyebrow': 'TODAY · FUNCTIONAL' if is_today else 'FUNCTIONAL STRENGTH',
-            'title': w['name'], 'meta': str(len(w['exercises'])) + ' exercises · ~' + str(w['est_min']) + ' min',
-            'exercises': [{'name': ex['name'], 'target': str(ex['target_sets']) + '×' + ex['target_reps']} for ex in w['exercises']],
-            'focusTags': [], 'preview': preview, 'showCta': is_today, 'ctaLabel': 'Start Workout',
-            'hasStatus': bool(status), 'statusTag': status,
-        }
-    if ptype == 'yoga':
-        y = YOGA_SESSIONS[plan['yoga_key']]
-        status = 'Completed' if (is_past and _day_has_matching_session(db, d, 'yoga')) else \
-            ('Missed' if is_past else ('Scheduled' if not is_today else ''))
-        return {
-            'type': 'yoga', 'yogaKey': plan['yoga_key'], 'accent': YOGA_COLOR,
-            'eyebrow': 'TODAY · YOGA' if is_today else 'YOGA',
-            'title': y['title'], 'meta': y['coach'] + ' · ~' + str(y['est_min']) + ' min',
-            'exercises': [], 'focusTags': y['focus'], 'preview': ' · '.join(y['focus']),
-            'showCta': is_today, 'ctaLabel': 'Start Session',
-            'hasStatus': bool(status), 'statusTag': status,
-        }
-    return {
-        'type': 'rest', 'accent': 'rgba(245,243,239,.35)',
-        'eyebrow': 'TODAY · REST' if is_today else 'REST DAY', 'title': 'Recovery day',
-        'meta': 'Light movement, mobility, or full rest — your call.' if is_today else 'Light movement, mobility, or full rest.',
-        'exercises': [], 'focusTags': [], 'preview': '', 'showCta': False, 'ctaLabel': '',
-        'hasStatus': False, 'statusTag': '',
-    }
-
-
 def _query_history(db, today, limit=None):
     items = []
     for r in db.execute(
@@ -548,7 +385,7 @@ def _query_history(db, today, limit=None):
     ).fetchall():
         d = datetime.strptime(r['date'], '%Y-%m-%d').date()
         if r['session_type'] == 'functional':
-            w = FUNCTIONAL_WORKOUTS.get(r['workout_key'])
+            w = AB_WORKOUTS.get(r['workout_key'])
             by_ex = {}
             for er in db.execute(
                 'SELECT exercise_id, exercise_name, set_index, weight, reps FROM session_sets '
@@ -558,20 +395,25 @@ def _query_history(db, today, limit=None):
                 by_ex[er['exercise_id']]['sets'].append(_fmt_num(er['weight']) + '×' + str(er['reps']))
             items.append({
                 'id': 's' + str(r['id']), 'category': 'functional', 'legacy': False, 'accent': FUNCTIONAL_COLOR,
-                'title': w['name'] if w else (r['workout_key'] or 'Workout'),
+                'title': w['label'] if w else (r['workout_key'] or 'Workout'),
                 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': r['pr_count'] or 0,
                 'exercises': [{'name': v['name'], 'sets': ', '.join(v['sets'])} for v in by_ex.values()],
                 'notes': '', 'focusTags': [],
             })
+        elif r['session_type'] == 'poci':
+            items.append({
+                'id': 's' + str(r['id']), 'category': 'poci', 'legacy': False, 'accent': POCI_COLOR,
+                'title': 'Poci', 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
+                'exercises': [], 'notes': r['notes'] or '', 'focusTags': [],
+            })
         else:
-            y = YOGA_SESSIONS.get(r['yoga_key'])
             items.append({
                 'id': 's' + str(r['id']), 'category': 'yoga', 'legacy': False, 'accent': YOGA_COLOR,
-                'title': y['title'] if y else (r['yoga_key'] or 'Yoga'),
-                'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'title': 'Yoga Session', 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
-                'exercises': [], 'notes': r['notes'] or '', 'focusTags': y['focus'] if y else [],
+                'exercises': [], 'notes': r['notes'] or '', 'focusTags': [],
             })
 
     legacy_meta = {
@@ -611,10 +453,17 @@ def _query_history(db, today, limit=None):
     return items[:limit] if limit else items
 
 
-def _squat_chart(db, today):
+# Squat (gym) is exercises[0] of workout_a_gym in LIVE_WORKOUT_EXERCISES —
+# see _build_ab_workouts for the id scheme.
+PROGRESS_CHART_EXERCISE_ID = 'workout_a_gym_0'
+PROGRESS_CHART_EXERCISE_LABEL = 'Squat'
+
+
+def _progress_chart(db, today):
     rows = list(reversed(db.execute(
         '''SELECT s.date, ss.weight FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
-           WHERE ss.exercise_id = 'b1' AND ss.set_index = 0 ORDER BY s.date DESC LIMIT 5'''
+           WHERE ss.exercise_id = ? AND ss.set_index = 0 ORDER BY s.date DESC LIMIT 5''',
+        (PROGRESS_CHART_EXERCISE_ID,)
     ).fetchall()))
     max_kg = max((r['weight'] for r in rows), default=1) or 1
     out = []
@@ -634,54 +483,33 @@ def _squat_chart(db, today):
 def _build_initial_data(db):
     today = date.today()
     today_idx = _weekday_sun0(today)
-    sunday = today - timedelta(days=today_idx)
     now = datetime.now()
 
-    week_days = []
-    plan_by_day = []
-    training_total, training_done = 0, 0
-    for i in range(7):
-        d = sunday + timedelta(days=i)
-        plan = WEEKLY_PLAN[i]
-        ptype = plan['type']
-        is_today = i == today_idx
-        done = ptype != 'rest' and _day_has_matching_session(db, d, ptype)
-        if ptype != 'rest':
-            training_total += 1
-            if done:
-                training_done += 1
-        accent = FUNCTIONAL_COLOR if ptype == 'functional' else (YOGA_COLOR if ptype == 'yoga' else 'rgba(245,243,239,.16)')
-        week_days.append({
-            'idx': i, 'letter': WEEKDAY_LETTERS_EN[i], 'dateNum': d.day,
-            'planType': ptype, 'accent': accent, 'done': done, 'isToday': is_today,
-        })
-        plan_by_day.append(_plan_detail_for_day(db, d, plan, is_today, i < today_idx))
-
-    sat = sunday + timedelta(days=6)
-    week_range_label = sunday.strftime('%b') + ' ' + str(sunday.day) + ' – ' + sat.strftime('%b') + ' ' + str(sat.day)
-
     history = _query_history(db, today)
-    workouts_out = {}
-    for key, w in FUNCTIONAL_WORKOUTS.items():
+    ab_workouts_out = {}
+    for key, w in AB_WORKOUTS.items():
         exs = []
         for ex in w['exercises']:
             last = _last_set_for_exercise(db, ex['id'])
             exs.append(dict(ex, lastWeight=last['weight'], lastReps=last['reps']))
-        workouts_out[key] = {'name': w['name'], 'estMin': w['est_min'], 'exercises': exs}
+        ab_workouts_out[key] = {'label': w['label'], 'exercises': exs}
+
+    # Sessions logged from this Sun-Sat week through today — a simple
+    # activity count, not tied to any required schedule.
+    week_count = sum(1 for h in history if h['daysAgo'] <= today_idx)
 
     return {
-        'today': str(today), 'todayIdx': today_idx,
+        'today': str(today),
         'greeting': 'Good morning.' if now.hour < 12 else ('Good afternoon.' if now.hour < 18 else 'Good evening.'),
         'todayDateLabel': (today.strftime('%A, %b') + ' ' + str(today.day)).upper(),
         'streak': _calc_day_streak(db, today), 'showGamification': True,
         'restSeconds': REST_SECONDS_DEFAULT, 'autoRestTimer': True,
-        'weekDays': week_days, 'weekRangeLabel': week_range_label,
-        'todayPlan': plan_by_day[today_idx], 'planByDay': plan_by_day,
-        'statWeek': str(training_done) + '/' + str(training_total),
+        'weekCount': week_count,
         'lastPR': _last_pr(db), 'lastSession': history[0] if history else None,
-        'workouts': workouts_out, 'yogaSessions': YOGA_SESSIONS,
+        'abWorkouts': ab_workouts_out,
         'exerciseNotes': {r['exercise_id']: r['note'] for r in db.execute('SELECT exercise_id, note FROM exercise_notes').fetchall()},
-        'history': history, 'squatChart': _squat_chart(db, today),
+        'history': history,
+        'progressChart': _progress_chart(db, today), 'progressChartLabel': PROGRESS_CHART_EXERCISE_LABEL,
     }
 
 
@@ -870,7 +698,7 @@ def log_live():
 def save_functional_session():
     data = request.get_json(silent=True) or {}
     workout_key = data.get('workoutKey')
-    if workout_key not in FUNCTIONAL_WORKOUTS:
+    if workout_key not in AB_WORKOUTS:
         return jsonify({'error': 'Invalid workout key'}), 400
     session_date = data.get('date', str(date.today()))
     try:
@@ -927,12 +755,17 @@ def save_functional_session():
     return jsonify({'success': True, 'prCount': pr_count})
 
 
-@app.route('/api/sessions/yoga', methods=['POST'])
-def save_yoga_session():
+GENERIC_SESSION_CATEGORIES = {'yoga', 'poci'}
+
+
+@app.route('/api/sessions/generic', methods=['POST'])
+def save_generic_session():
+    """Freeform timed session (yoga or poci) — just a duration and notes,
+    no prescribed template. You can add your own real content later."""
     data = request.get_json(silent=True) or {}
-    yoga_key = data.get('yogaKey')
-    if yoga_key not in YOGA_SESSIONS:
-        return jsonify({'error': 'Invalid yoga key'}), 400
+    category = data.get('category')
+    if category not in GENERIC_SESSION_CATEGORIES:
+        return jsonify({'error': 'Invalid category'}), 400
     session_date = data.get('date', str(date.today()))
     try:
         duration_sec = max(1, int(data.get('durationSec') or 60))
@@ -942,8 +775,8 @@ def save_yoga_session():
 
     db = get_db()
     db.execute(
-        'INSERT INTO sessions (date, session_type, yoga_key, duration_sec, notes, created_at) VALUES (?,?,?,?,?,?)',
-        (session_date, 'yoga', yoga_key, duration_sec, notes, datetime.now().isoformat())
+        'INSERT INTO sessions (date, session_type, duration_sec, notes, created_at) VALUES (?,?,?,?,?)',
+        (session_date, category, duration_sec, notes, datetime.now().isoformat())
     )
     db.commit()
     return jsonify({'success': True})

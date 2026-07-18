@@ -166,53 +166,53 @@ def test_home_serves_training_app(client):
 def test_save_functional_session(client):
     import json
     payload = {
-        'workoutKey': 'B',
+        'workoutKey': 'workout_b_gym',
         'date': '2026-07-01',
         'durationSec': 1800,
         'exercises': [
-            {'id': 'b1', 'name': 'Squat (Dumbbell)', 'sets': [
+            {'id': 'workout_b_gym_0', 'name': 'Romanian Deadlift', 'sets': [
                 {'weight': 25, 'reps': 10}, {'weight': 25, 'reps': 10}, {'weight': 25, 'reps': 9},
             ]},
         ],
-        'notes': {'b1': 'Felt good today'},
+        'notes': {'workout_b_gym_0': 'Felt good today'},
     }
     r = client.post('/api/sessions/functional', data=json.dumps(payload), content_type='application/json')
     assert r.status_code == 200
     data = json.loads(r.data)
     assert data['success'] is True
-    # first-ever weight for b1 in this empty test DB is a baseline, not a PR
+    # first-ever weight for this exercise in the empty test DB is a baseline, not a PR
     assert data['prCount'] == 0
 
     r2 = client.get('/')
-    assert b'Squat (Dumbbell)' in r2.data
+    assert b'Romanian Deadlift' in r2.data
 
 
 def test_save_functional_session_invalid_workout_key(client):
     import json
     r = client.post('/api/sessions/functional',
-        data=json.dumps({'workoutKey': 'Z', 'exercises': []}),
+        data=json.dumps({'workoutKey': 'nope', 'exercises': []}),
         content_type='application/json')
     assert r.status_code == 400
 
 
 def test_save_functional_session_detects_pr(client):
     import json
-    base = {'workoutKey': 'A', 'exercises': [
-        {'id': 'a1', 'name': 'Goblet Squat (Dumbbell)', 'sets': [{'weight': 10, 'reps': 12}]},
+    base = {'workoutKey': 'workout_a_gym', 'exercises': [
+        {'id': 'workout_a_gym_0', 'name': 'Squat', 'sets': [{'weight': 10, 'reps': 12}]},
     ]}
     client.post('/api/sessions/functional', data=json.dumps(base), content_type='application/json')
-    heavier = {'workoutKey': 'A', 'exercises': [
-        {'id': 'a1', 'name': 'Goblet Squat (Dumbbell)', 'sets': [{'weight': 15, 'reps': 12}]},
+    heavier = {'workoutKey': 'workout_a_gym', 'exercises': [
+        {'id': 'workout_a_gym_0', 'name': 'Squat', 'sets': [{'weight': 15, 'reps': 12}]},
     ]}
     r = client.post('/api/sessions/functional', data=json.dumps(heavier), content_type='application/json')
     data = json.loads(r.data)
     assert data['prCount'] == 1
 
 
-def test_save_yoga_session(client):
+def test_save_generic_session_yoga(client):
     import json
-    payload = {'yogaKey': 'yoga1', 'date': '2026-07-01', 'durationSec': 1500, 'notes': 'Good stretch'}
-    r = client.post('/api/sessions/yoga', data=json.dumps(payload), content_type='application/json')
+    payload = {'category': 'yoga', 'date': '2026-07-01', 'durationSec': 1500, 'notes': 'Good stretch'}
+    r = client.post('/api/sessions/generic', data=json.dumps(payload), content_type='application/json')
     assert r.status_code == 200
     assert json.loads(r.data)['success'] is True
 
@@ -220,10 +220,21 @@ def test_save_yoga_session(client):
     assert b'Good stretch' in r2.data
 
 
-def test_save_yoga_session_invalid_key(client):
+def test_save_generic_session_poci(client):
     import json
-    r = client.post('/api/sessions/yoga',
-        data=json.dumps({'yogaKey': 'nope'}),
+    payload = {'category': 'poci', 'date': '2026-07-01', 'durationSec': 3600, 'notes': 'Beach session'}
+    r = client.post('/api/sessions/generic', data=json.dumps(payload), content_type='application/json')
+    assert r.status_code == 200
+    assert json.loads(r.data)['success'] is True
+
+    r2 = client.get('/')
+    assert b'Beach session' in r2.data
+
+
+def test_save_generic_session_invalid_category(client):
+    import json
+    r = client.post('/api/sessions/generic',
+        data=json.dumps({'category': 'nope'}),
         content_type='application/json')
     assert r.status_code == 400
 
@@ -282,3 +293,53 @@ def test_valid_workout_types_are_the_four_gym_home_variants(client):
         'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home',
         'poci', 'flexibility',
     }
+
+
+def test_home_uses_real_ab_workouts_not_claude_design_mockup(client):
+    r = client.get('/')
+    assert r.status_code == 200
+    body = r.data.decode()
+    # the real gym/home program is what's served now...
+    assert 'Squat' in body and 'Workout A \\u00b7 Gym' in body
+    # ...and none of the placeholder mockup content from the Claude Design
+    # handoff (Functional Strength A/B/C, prescribed yoga sessions) remains.
+    for stale in ('Front Squat (Dumbbell)', 'Single-Leg RDL', 'Flow &amp; Breath', 'Coach Maya'):
+        assert stale not in body
+
+
+def test_purge_stale_mockup_sessions_wipes_old_seed_data(client):
+    from datetime import datetime
+    db = flask_app.get_db()
+    db.execute(
+        "INSERT INTO sessions (date, session_type, workout_key, duration_sec, pr_count, created_at) "
+        "VALUES ('2026-07-17','functional','C',2200,1,?)",
+        (datetime.now().isoformat(),)
+    )
+    db.execute(
+        "INSERT INTO session_sets (session_id, exercise_id, exercise_name, set_index, weight, reps, is_pr) "
+        "VALUES (1,'c1','Front Squat (Dumbbell)',0,22,9,1)"
+    )
+    db.execute("INSERT INTO exercise_notes (exercise_id, note) VALUES ('a2','Grip was the limiter.')")
+    db.commit()
+    assert db.execute('SELECT COUNT(*) FROM sessions').fetchone()[0] == 1
+
+    flask_app._purge_stale_mockup_sessions(db)
+
+    assert db.execute('SELECT COUNT(*) FROM sessions').fetchone()[0] == 0
+    assert db.execute('SELECT COUNT(*) FROM session_sets').fetchone()[0] == 0
+    assert db.execute('SELECT COUNT(*) FROM exercise_notes').fetchone()[0] == 0
+
+
+def test_purge_stale_mockup_sessions_leaves_real_data_alone(client):
+    from datetime import datetime
+    db = flask_app.get_db()
+    db.execute(
+        "INSERT INTO sessions (date, session_type, workout_key, duration_sec, pr_count, created_at) "
+        "VALUES ('2026-07-17','functional','workout_a_gym',1800,0,?)",
+        (datetime.now().isoformat(),)
+    )
+    db.commit()
+
+    flask_app._purge_stale_mockup_sessions(db)
+
+    assert db.execute('SELECT COUNT(*) FROM sessions').fetchone()[0] == 1

@@ -1,23 +1,22 @@
 (() => {
   const D = window.__INITIAL__;
-  const COLORS = { functional: '#2F82FF', yoga: '#6FBFA0', gold: '#E8B84B' };
+  const COLORS = { functional: '#2F82FF', yoga: '#6FBFA0', poci: '#F97316', gold: '#E8B84B' };
   const RING_CIRC = 163.36;
   const SAVE_KEY = 'training_live_session';
 
   const state = {
     screen: 'home',
     activeTab: 'home',
-    planSelectedDayIdx: D.todayIdx,
     activeWorkoutKey: null,
-    activeYogaKey: null,
+    activeGenericCategory: null,
     exerciseIdx: 0,
     setLogs: {},
     exerciseNotesDraft: {},
     restActive: false,
     restSecLeft: 0,
-    yogaRunning: false,
-    yogaElapsed: 0,
-    yogaNotes: '',
+    genericRunning: false,
+    genericElapsed: 0,
+    genericNotes: '',
     toast: null,
     historyFilter: 'all',
     expandedHistoryId: null,
@@ -49,15 +48,17 @@
   function restRingOffset() {
     return (RING_CIRC * (1 - state.restSecLeft / D.restSeconds)).toFixed(2);
   }
+  function genericLabel(category) { return category === 'poci' ? 'Poci Session' : 'Yoga Session'; }
+  function genericColor(category) { return category === 'poci' ? COLORS.poci : COLORS.yoga; }
 
   // ---------- persistence ----------
   function saveSession() {
-    if (state.screen !== 'live-functional' && state.screen !== 'live-yoga') return;
+    if (state.screen !== 'live-functional' && state.screen !== 'live-generic') return;
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      screen: state.screen, activeWorkoutKey: state.activeWorkoutKey, activeYogaKey: state.activeYogaKey,
+      screen: state.screen, activeWorkoutKey: state.activeWorkoutKey, activeGenericCategory: state.activeGenericCategory,
       exerciseIdx: state.exerciseIdx, setLogs: state.setLogs, exerciseNotesDraft: state.exerciseNotesDraft,
       restActive: state.restActive, restSecLeft: state.restSecLeft,
-      yogaRunning: state.yogaRunning, yogaElapsed: state.yogaElapsed, yogaNotes: state.yogaNotes,
+      genericRunning: state.genericRunning, genericElapsed: state.genericElapsed, genericNotes: state.genericNotes,
       sessionStartMs: state.sessionStartMs, sessionPRCount: state.sessionPRCount,
       savedAt: Date.now(),
     }));
@@ -88,41 +89,23 @@
 
   // ---------- icons ----------
   function iconHome(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/></svg>`; }
-  function iconPlan(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2.5" stroke="${c}" stroke-width="1.8"/><path d="M4 10H20M8 3V6M16 3V6" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/></svg>`; }
   function iconHistory(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="${c}" stroke-width="1.8"/><path d="M12 7.5V12L15.5 14.5" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconChevron(c) { return `<svg width="7" height="12" viewBox="0 0 7 12"><path d="M1 1L6 6L1 11" stroke="${c || 'rgba(245,243,239,.3)'}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconClose() { return `<svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1L13 13M13 1L1 13" stroke="rgba(245,243,239,.8)" stroke-width="1.7" stroke-linecap="round"/></svg>`; }
-  function iconPlaySmall(c) { return `<svg width="10" height="11" viewBox="0 0 10 11"><path d="M0 0L10 5.5L0 11V0Z" fill="${c}"/></svg>`; }
-  function iconPlayBig() { return `<svg width="16" height="18" viewBox="0 0 16 18"><path d="M0 0L16 9L0 18V0Z" fill="#F5F3EF"/></svg>`; }
+  function iconPlayBig(fill) { return `<svg width="16" height="18" viewBox="0 0 16 18"><path d="M0 0L16 9L0 18V0Z" fill="${fill || '#0B0A0D'}"/></svg>`; }
   function iconCheck() { return `<svg width="12" height="10" viewBox="0 0 14 11"><path d="M1 5.5L5 9.5L13 1.5" stroke="#0B0A0D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
 
   // ---------- tab bar ----------
   function renderTabBar() {
-    const show = ['home', 'plan', 'history'].includes(state.screen);
+    const show = ['home', 'history'].includes(state.screen);
     if (!show) { els.tabBar.innerHTML = ''; els.tabBar.style.display = 'none'; return; }
     els.tabBar.style.display = 'flex';
-    const tabs = [['home', 'Home', iconHome], ['plan', 'Plan', iconPlan], ['history', 'History', iconHistory]];
+    const tabs = [['home', 'Home', iconHome], ['history', 'History', iconHistory]];
     els.tabBar.innerHTML = tabs.map(([key, label, icon]) => {
       const active = state.activeTab === key;
       const color = active ? '#F5F3EF' : 'rgba(245,243,239,.35)';
       return `<button class="tr-tab" onclick="App.goTab('${key}')">${icon(color)}<span class="tr-tab-label" style="color:${color}">${label}</span></button>`;
     }).join('');
-  }
-
-  // ---------- shared: week strip ----------
-  function weekStrip() {
-    return `<div class="tr-week-strip">${D.weekDays.map(d => {
-      const ring = d.isToday ? 'box-shadow:0 0 0 2px rgba(245,243,239,.55);' : '';
-      const bg = d.done ? d.accent : 'transparent';
-      const textColor = d.done ? '#0B0A0D' : (d.planType === 'rest' ? 'rgba(245,243,239,.4)' : '#F5F3EF');
-      const selBg = d.idx === state.planSelectedDayIdx ? 'rgba(255,255,255,.06)' : 'transparent';
-      return `<button class="tr-week-day" style="background:${selBg}" onclick="App.selectPlanDay(${d.idx})">
-        <span class="tr-week-day-letter">${d.letter}</span>
-        <div class="tr-week-day-circle" style="border-color:${d.accent};background:${bg};${ring}">
-          <span class="tr-week-day-num" style="color:${textColor}">${d.dateNum}</span>
-        </div>
-      </button>`;
-    }).join('')}</div>`;
   }
 
   function lastSessionMetaLine(s) {
@@ -131,15 +114,30 @@
       if (s.prCount) line += ' · ' + s.prCount + ' PR' + (s.prCount > 1 ? 's' : '');
       return line;
     }
-    return (s.durationMin ? s.durationMin + ' min · ' : '') + (s.focusTags || []).join(', ');
+    if (s.category === 'yoga' || s.category === 'poci') {
+      const parts = [];
+      if (s.durationMin) parts.push(s.durationMin + ' min');
+      if (s.notes) parts.push(s.notes.slice(0, 40));
+      return parts.join(' · ') || 'Logged';
+    }
+    return s.notes ? s.notes.slice(0, 60) : 'Logged';
   }
 
   // ---------- Home ----------
+  function abCard(labelLetter, gymKey, homeKey) {
+    return `<div class="tr-card tr-ab-card">
+      <div class="tr-card-title" style="margin-top:0">Workout ${labelLetter}</div>
+      <div class="tr-ab-buttons">
+        <button class="tr-ab-btn" style="border-color:${COLORS.functional}" onclick="App.startFunctional('${gymKey}')">Gym</button>
+        <button class="tr-ab-btn" style="border-color:${COLORS.functional}" onclick="App.startFunctional('${homeKey}')">Home</button>
+      </div>
+    </div>`;
+  }
+
   function renderHome() {
-    const tp = D.todayPlan;
     const resume = loadSavedSession();
     const resumeBanner = resume ? `<div class="tr-resume-banner">
-      <span class="tr-resume-text">Unfinished ${resume.screen === 'live-yoga' ? 'yoga session' : 'workout'} in progress</span>
+      <span class="tr-resume-text">Unfinished ${resume.screen === 'live-generic' ? 'session' : 'workout'} in progress</span>
       <button class="tr-resume-btn" onclick="App.resumeSaved()">Continue</button>
     </div>` : '';
     els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
@@ -152,19 +150,18 @@
         ${D.showGamification ? `<div class="tr-streak"><div class="tr-streak-num">${D.streak}</div><div class="tr-streak-label">day streak</div></div>` : ''}
       </div>
 
-      <div class="tr-card">
-        <div class="tr-card-accent-bar" style="background:${tp.accent}"></div>
-        <div class="tr-card-eyebrow" style="color:${tp.accent}">${esc(tp.eyebrow)}</div>
-        <div class="tr-card-title">${esc(tp.title)}</div>
-        <div class="tr-card-meta">${esc(tp.meta)}</div>
-        ${tp.preview ? `<div class="tr-card-preview">${esc(tp.preview)}</div>` : ''}
-        ${tp.showCta ? `<button class="tr-btn-cta" style="background:${tp.accent}" onclick="App.startToday()">${esc(tp.ctaLabel)}</button>` : ''}
+      <div class="tr-ab-row">
+        ${abCard('A', 'workout_a_gym', 'workout_a_home')}
+        ${abCard('B', 'workout_b_gym', 'workout_b_home')}
       </div>
 
-      ${weekStrip()}
+      <div class="tr-quick-row">
+        <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.startGeneric('yoga')">Start Yoga</button>
+        <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.startGeneric('poci')">Start Poci</button>
+      </div>
 
       <div class="tr-stat-row">
-        <div class="tr-stat-card"><div class="tr-stat-value">${esc(D.statWeek)}</div><div class="tr-stat-label">this week</div></div>
+        <div class="tr-stat-card"><div class="tr-stat-value">${D.weekCount}</div><div class="tr-stat-label">sessions this week</div></div>
         ${D.showGamification && D.lastPR ? `<div class="tr-stat-card tr-clickable" style="flex:1.4" onclick="App.goTab('history')">
           <div class="tr-stat-value tr-gold">${esc(D.lastPR.value)}</div>
           <div class="tr-stat-label">PR · ${esc(D.lastPR.name.replace(' (Dumbbell)', ''))}</div>
@@ -183,40 +180,14 @@
     </div></div>`;
   }
 
-  // ---------- Plan ----------
-  function renderPlan() {
-    const detail = D.planByDay[state.planSelectedDayIdx];
-    els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
-      <div>
-        <div class="tr-eyebrow-date">THIS WEEK</div>
-        <div class="tr-greeting">${esc(D.weekRangeLabel)}</div>
-      </div>
-      ${weekStrip()}
-      <div class="tr-card">
-        <div class="tr-card-accent-bar" style="background:${detail.accent}"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="tr-card-eyebrow" style="color:${detail.accent}">${esc(detail.eyebrow)}</div>
-          ${detail.hasStatus ? `<div class="tr-status-tag">${esc(detail.statusTag)}</div>` : ''}
-        </div>
-        <div class="tr-card-title">${esc(detail.title)}</div>
-        <div class="tr-card-meta">${esc(detail.meta)}</div>
-        ${detail.focusTags.length ? `<div class="tr-focus-tags">${detail.focusTags.map(t => `<span class="tr-focus-tag">${esc(t)}</span>`).join('')}</div>` : ''}
-        ${detail.exercises.length ? `<div class="tr-plan-exercises">${detail.exercises.map(ex => `
-          <div class="tr-plan-ex-row"><span class="tr-plan-ex-name">${esc(ex.name)}</span><span class="tr-plan-ex-target">${esc(ex.target)}</span></div>
-        `).join('')}</div>` : ''}
-        ${detail.showCta ? `<button class="tr-btn-cta" style="background:${detail.accent}" onclick="App.startToday()">${esc(detail.ctaLabel)}</button>` : ''}
-      </div>
-    </div></div>`;
-  }
-
   // ---------- History ----------
   function renderHistory() {
     const filtered = D.history.filter(h => state.historyFilter === 'all' || h.category === state.historyFilter);
     els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
       <div class="tr-greeting" style="margin-top:0">History</div>
-      ${D.squatChart.length ? `<div class="tr-chart-card">
-        <div class="tr-chart-head"><div class="tr-chart-title">Squat (Dumbbell)</div><div class="tr-chart-sub">last ${D.squatChart.length} sessions</div></div>
-        <div class="tr-chart-bars">${D.squatChart.map(b => `
+      ${D.progressChart.length ? `<div class="tr-chart-card">
+        <div class="tr-chart-head"><div class="tr-chart-title">${esc(D.progressChartLabel)}</div><div class="tr-chart-sub">last ${D.progressChart.length} sessions</div></div>
+        <div class="tr-chart-bars">${D.progressChart.map(b => `
           <div class="tr-chart-bar-col">
             <span class="tr-chart-bar-val" style="color:${b.valueColor}">${esc(b.value)}</span>
             <div class="tr-chart-bar" style="height:${b.heightPx}px;background:${b.barColor}"></div>
@@ -225,9 +196,9 @@
       </div>` : ''}
 
       <div class="tr-filter-row">
-        ${['all', 'functional', 'yoga'].map(key => {
+        ${['all', 'functional', 'yoga', 'poci'].map(key => {
           const active = state.historyFilter === key;
-          const label = key === 'all' ? 'All' : (key === 'functional' ? 'Functional' : 'Yoga');
+          const label = key === 'all' ? 'All' : (key === 'functional' ? 'Workout' : (key === 'yoga' ? 'Yoga' : 'Poci'));
           return `<button class="tr-filter-btn" style="border:1px solid ${active ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.08)'};background:${active ? 'rgba(255,255,255,.1)' : 'transparent'};color:${active ? '#F5F3EF' : 'rgba(245,243,239,.45)'}" onclick="App.setHistoryFilter('${key}')">${label}</button>`;
         }).join('')}
       </div>
@@ -243,8 +214,8 @@
     let metaLine;
     if (h.category === 'functional') {
       metaLine = h.exercises.length + ' exercises' + (h.prCount ? ' · ' + h.prCount + ' PR' + (h.prCount > 1 ? 's' : '') : '') + (h.durationMin ? ' · ' + h.durationMin + ' min' : '');
-    } else if (h.category === 'yoga') {
-      metaLine = (h.durationMin ? h.durationMin + ' min · ' : '') + (h.focusTags || []).join(', ');
+    } else if (h.category === 'yoga' || h.category === 'poci') {
+      metaLine = h.durationMin ? h.durationMin + ' min' : (h.notes ? h.notes.slice(0, 60) : 'Logged');
     } else {
       metaLine = h.durationMin ? h.durationMin + ' min' : (h.notes ? h.notes.slice(0, 60) : 'Logged manually');
     }
@@ -273,9 +244,9 @@
     </div>`;
   }
 
-  // ---------- Live functional ----------
+  // ---------- Live functional (Workout A/B, gym/home) ----------
   function renderLiveFunctional() {
-    const workout = D.workouts[state.activeWorkoutKey];
+    const workout = D.abWorkouts[state.activeWorkoutKey];
     const idx = state.exerciseIdx;
     const ex = workout.exercises[idx];
     const sets = state.setLogs[ex.id];
@@ -287,7 +258,7 @@
         <div class="tr-live-topbar">
           <button class="tr-icon-btn" onclick="App.closeLive()">${iconClose()}</button>
           <div class="tr-live-title-block">
-            <div class="tr-live-title">${esc(workout.name)}</div>
+            <div class="tr-live-title">${esc(workout.label)}</div>
             <div class="tr-live-sub">Exercise ${idx + 1} of ${workout.exercises.length}</div>
           </div>
           <div style="width:34px"></div>
@@ -302,7 +273,6 @@
             <div class="tr-cue-label" style="color:${COLORS.functional}">Coach Cue</div>
             <div class="tr-cue-text">${esc(ex.cue)}</div>
           </div>
-          <button class="tr-demo-btn" style="border:1px solid rgba(47,130,255,.35);color:${COLORS.functional}" onclick="App.watchDemo()">${iconPlaySmall(COLORS.functional)} Watch demo</button>
         </div>
 
         <div class="tr-card">
@@ -376,48 +346,40 @@
     </div>`;
   }
 
-  // ---------- Live yoga ----------
-  function renderLiveYoga() {
-    const y = D.yogaSessions[state.activeYogaKey];
+  // ---------- Live generic (Yoga / Poci) ----------
+  function renderLiveGeneric() {
+    const category = state.activeGenericCategory;
+    const color = genericColor(category);
     els.root.innerHTML = `<div class="tr-live-header tr-live-header-yoga">
         <button class="tr-icon-btn" onclick="App.closeLive()">${iconClose()}</button>
         <div class="tr-live-title-block">
-          <div class="tr-live-title">${esc(y.title)}</div>
-          <div class="tr-live-sub">${esc(y.coach)}</div>
+          <div class="tr-live-title">${esc(genericLabel(category))}</div>
         </div>
         <div style="width:34px"></div>
       </div>
       <div class="tr-live-body">
-        <div class="tr-yoga-video">
-          <div class="tr-yoga-video-frame">Video thumbnail</div>
-          <div class="tr-yoga-play-overlay"><div class="tr-yoga-play-circle">${iconPlayBig()}</div></div>
-        </div>
-        <div class="tr-yoga-tags-row">
-          <div class="tr-focus-tags">${y.focus.map(t => `<span class="tr-focus-tag">${esc(t)}</span>`).join('')}</div>
-          <button class="tr-yt-btn" style="border:1px solid rgba(111,191,160,.35);color:${COLORS.yoga}" onclick="App.watchDemo()">Watch on YouTube</button>
-        </div>
         <div class="tr-yoga-timer-card">
-          <div class="tr-yoga-elapsed" id="yoga-elapsed">${fmtTime(state.yogaElapsed)}</div>
-          <button class="tr-yoga-playpause" style="background:${COLORS.yoga}" onclick="App.toggleYogaTimer()">
-            ${state.yogaRunning
+          <div class="tr-yoga-elapsed" id="generic-elapsed">${fmtTime(state.genericElapsed)}</div>
+          <button class="tr-yoga-playpause" style="background:${color}" onclick="App.toggleGenericTimer()">
+            ${state.genericRunning
               ? `<svg width="14" height="16" viewBox="0 0 14 16"><rect x="0" y="0" width="4" height="16" rx="1" fill="#0B0A0D"/><rect x="10" y="0" width="4" height="16" rx="1" fill="#0B0A0D"/></svg>`
-              : iconPlayBig().replace('#F5F3EF', '#0B0A0D')}
+              : iconPlayBig('#0B0A0D')}
           </button>
         </div>
         <div class="tr-yoga-notes-card">
-          <div class="tr-yoga-notes-label">What did we work on today?</div>
-          <textarea class="tr-yoga-notes-input" placeholder="Jot a quick note while it's fresh…" oninput="App.changeYogaNotes(this.value)">${esc(state.yogaNotes)}</textarea>
+          <div class="tr-yoga-notes-label">Notes</div>
+          <textarea class="tr-yoga-notes-input" placeholder="Jot a quick note while it's fresh…" oninput="App.changeGenericNotes(this.value)">${esc(state.genericNotes)}</textarea>
         </div>
       </div>
       <div class="tr-yoga-footer">
-        <button class="tr-btn-finish" style="background:${COLORS.yoga}" ${state.saving ? 'disabled' : ''} onclick="App.finishYoga()">${state.saving ? 'Saving…' : 'Finish Session'}</button>
+        <button class="tr-btn-finish" style="background:${color}" ${state.saving ? 'disabled' : ''} onclick="App.finishGeneric()">${state.saving ? 'Saving…' : 'Finish Session'}</button>
       </div>`;
   }
 
   // ---------- Complete ----------
   function renderComplete() {
     const c = state.completionStats;
-    const accent = c.type === 'functional' ? COLORS.functional : COLORS.yoga;
+    const accent = c.type === 'functional' ? COLORS.functional : genericColor(c.category);
     els.root.innerHTML = `<div class="tr-complete-screen">
       <div class="tr-complete-icon" style="background:${accent}">
         <svg width="30" height="23" viewBox="0 0 30 23"><path d="M2 12L11 21L28 2" stroke="#0B0A0D" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -431,7 +393,7 @@
         ${c.type === 'functional' ? `
           <div class="tr-complete-stat"><div class="tr-complete-stat-value">${Math.round(c.volume || 0).toLocaleString()}</div><div class="tr-complete-stat-label">volume (kg)</div></div>
           <div class="tr-complete-stat" style="background:rgba(232,184,75,.1);border-color:rgba(232,184,75,.25)"><div class="tr-complete-stat-value" style="color:${COLORS.gold}">${c.prCount || 0}</div><div class="tr-complete-stat-label" style="color:${COLORS.gold}">new PRs</div></div>
-        ` : `<div class="tr-complete-stat" style="flex:2;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap">${(c.focusTags || []).map(t => `<span class="tr-focus-tag">${esc(t)}</span>`).join('')}</div>`}
+        ` : ''}
       </div>
       <button class="tr-btn-home" onclick="App.backHome()">Back to Home</button>
     </div>`;
@@ -440,10 +402,9 @@
   // ---------- dispatch ----------
   function renderScreen() {
     if (state.screen === 'home') renderHome();
-    else if (state.screen === 'plan') renderPlan();
     else if (state.screen === 'history') renderHistory();
     else if (state.screen === 'live-functional') renderLiveFunctional();
-    else if (state.screen === 'live-yoga') renderLiveYoga();
+    else if (state.screen === 'live-generic') renderLiveGeneric();
     else if (state.screen === 'complete') renderComplete();
   }
   function render() {
@@ -459,14 +420,8 @@
       state.screen = tab;
       render();
     },
-    selectPlanDay(idx) { state.planSelectedDayIdx = idx; renderScreen(); },
-    startToday() {
-      const tp = state.screen === 'plan' ? D.planByDay[state.planSelectedDayIdx] : D.todayPlan;
-      if (tp.type === 'functional') App.startFunctional(tp.workoutKey);
-      else if (tp.type === 'yoga') App.startYoga(tp.yogaKey);
-    },
     startFunctional(key) {
-      const workout = D.workouts[key];
+      const workout = D.abWorkouts[key];
       state.activeWorkoutKey = key;
       state.exerciseIdx = 0;
       state.setLogs = {};
@@ -483,13 +438,13 @@
       saveSession();
       render();
     },
-    startYoga(key) {
-      state.activeYogaKey = key;
-      state.yogaRunning = true;
-      state.yogaElapsed = 0;
-      state.yogaNotes = '';
+    startGeneric(category) {
+      state.activeGenericCategory = category;
+      state.genericRunning = true;
+      state.genericElapsed = 0;
+      state.genericNotes = '';
       state.sessionStartMs = Date.now();
-      state.screen = 'live-yoga';
+      state.screen = 'live-generic';
       state.activeTab = null;
       saveSession();
       render();
@@ -497,7 +452,7 @@
     closeLive() {
       clearSavedSession();
       state.restActive = false;
-      state.yogaRunning = false;
+      state.genericRunning = false;
       state.screen = 'home';
       state.activeTab = 'home';
       render();
@@ -508,7 +463,7 @@
       saveSession();
     },
     toggleSet(exId, idx) {
-      const workout = D.workouts[state.activeWorkoutKey];
+      const workout = D.abWorkouts[state.activeWorkoutKey];
       const ex = workout.exercises.find(e => e.id === exId);
       const set = state.setLogs[exId][idx];
       const willComplete = !set.done;
@@ -538,7 +493,7 @@
       renderScreen();
     },
     jumpNext() {
-      const workout = D.workouts[state.activeWorkoutKey];
+      const workout = D.abWorkouts[state.activeWorkoutKey];
       state.exerciseIdx = Math.min(workout.exercises.length - 1, state.exerciseIdx + 1);
       state.restActive = false;
       saveSession();
@@ -546,7 +501,7 @@
     },
     nextExercise() {
       if (state.saving) return;
-      const workout = D.workouts[state.activeWorkoutKey];
+      const workout = D.abWorkouts[state.activeWorkoutKey];
       if (state.exerciseIdx < workout.exercises.length - 1) {
         state.exerciseIdx++;
         state.restActive = false;
@@ -560,7 +515,7 @@
       if (state.saving) return;
       state.saving = true;
       renderScreen();
-      const workout = D.workouts[state.activeWorkoutKey];
+      const workout = D.abWorkouts[state.activeWorkoutKey];
       const durationSec = Math.max(1, Math.round((Date.now() - state.sessionStartMs) / 1000));
       let volume = 0;
       const exercisesPayload = [];
@@ -579,7 +534,7 @@
         body: JSON.stringify({ workoutKey: state.activeWorkoutKey, date: D.today, durationSec, exercises: exercisesPayload, notes: notesPayload }),
       }).then(r => r.json()).then(res => {
         state.saving = false;
-        state.completionStats = { type: 'functional', title: workout.name, durationSec, volume, prCount: (res && res.prCount) || state.sessionPRCount };
+        state.completionStats = { type: 'functional', title: workout.label, durationSec, volume, prCount: (res && res.prCount) || state.sessionPRCount };
         state.screen = 'complete';
         clearSavedSession();
         render();
@@ -589,23 +544,22 @@
         renderScreen();
       });
     },
-    watchDemo() { showToast('Demo video would open on YouTube', 'neutral'); },
-    toggleYogaTimer() { state.yogaRunning = !state.yogaRunning; saveSession(); renderScreen(); },
-    changeYogaNotes(val) { state.yogaNotes = val; saveSession(); },
-    finishYoga() {
+    toggleGenericTimer() { state.genericRunning = !state.genericRunning; saveSession(); renderScreen(); },
+    changeGenericNotes(val) { state.genericNotes = val; saveSession(); },
+    finishGeneric() {
       if (state.saving) return;
       state.saving = true;
       renderScreen();
-      const y = D.yogaSessions[state.activeYogaKey];
-      const durationSec = state.yogaElapsed || Math.max(1, Math.round((Date.now() - state.sessionStartMs) / 1000));
-      fetch('/api/sessions/yoga', {
+      const category = state.activeGenericCategory;
+      const durationSec = state.genericElapsed || Math.max(1, Math.round((Date.now() - state.sessionStartMs) / 1000));
+      fetch('/api/sessions/generic', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yogaKey: state.activeYogaKey, date: D.today, durationSec, notes: state.yogaNotes }),
+        body: JSON.stringify({ category, date: D.today, durationSec, notes: state.genericNotes }),
       }).then(r => r.json()).then(() => {
         state.saving = false;
-        state.completionStats = { type: 'yoga', title: y.title, durationSec, focusTags: y.focus };
+        state.completionStats = { type: 'generic', category, title: genericLabel(category), durationSec };
         state.screen = 'complete';
-        state.yogaRunning = false;
+        state.genericRunning = false;
         clearSavedSession();
         render();
       }).catch(() => {
@@ -617,7 +571,7 @@
     toggleHistoryExpand(id) { state.expandedHistoryId = state.expandedHistoryId === id ? null : id; renderScreen(); },
     setHistoryFilter(f) { state.historyFilter = f; renderScreen(); },
     backHome() {
-      // A session was just saved server-side — reload so Home/Plan/History
+      // A session was just saved server-side — reload so Home/History
       // pick up the fresh streak, PR, history and chart data.
       window.location.href = '/';
     },
@@ -630,7 +584,7 @@
   };
   window.App = App;
 
-  // ---------- ticking (rest timer / yoga elapsed) ----------
+  // ---------- ticking (rest timer / generic elapsed) ----------
   function startTicker() {
     tickTimer = setInterval(() => {
       if (state.screen === 'live-functional' && state.restActive) {
@@ -647,10 +601,10 @@
         }
         saveSession();
       }
-      if (state.screen === 'live-yoga' && state.yogaRunning) {
-        state.yogaElapsed++;
-        const el = document.getElementById('yoga-elapsed');
-        if (el) el.textContent = fmtTime(state.yogaElapsed);
+      if (state.screen === 'live-generic' && state.genericRunning) {
+        state.genericElapsed++;
+        const el = document.getElementById('generic-elapsed');
+        if (el) el.textContent = fmtTime(state.genericElapsed);
         saveSession();
       }
     }, 1000);
