@@ -34,24 +34,44 @@ def test_log_workout_post(client):
     }, follow_redirects=True)
     assert r.status_code == 200
 
-def test_log_workout_a_post(client):
+def test_log_workout_a_gym_post(client):
     r = client.post('/log', data={
-        'workout_type': 'workout_a',
+        'workout_type': 'workout_a_gym',
         'date': '2026-06-06',
         'notes': '',
-        'exercises': ['Pull-up', 'Plank'],
+        'exercises': ['Squat', 'Pull-up'],
+        'sets_Squat': '3',
+        'reps_Squat': '8,8,7',
         'sets_Pull-up': '3',
-        'reps_Pull-up': '8,8,7',
-        'sets_Plank': '3',
-        'reps_Plank': '60s',
+        'reps_Pull-up': '8,8,6',
+    }, follow_redirects=True)
+    assert r.status_code == 200
+
+def test_log_workout_a_home_post(client):
+    r = client.post('/log', data={
+        'workout_type': 'workout_a_home',
+        'date': '2026-06-06',
+        'notes': '',
+        'exercises': ['Goblet Squat (dumbbell)', 'Parallette Dips'],
+        'sets_Goblet Squat (dumbbell)': '3',
+        'reps_Goblet Squat (dumbbell)': '10,10,9',
+        'sets_Parallette Dips': '3',
+        'reps_Parallette Dips': '10,10,8',
     }, follow_redirects=True)
     assert r.status_code == 200
 
 def test_live_workout_page_loads(client):
+    for workout_type in ('workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home'):
+        r = client.get(f'/workout/live/{workout_type}')
+        assert r.status_code == 200, workout_type
+
+def test_live_workout_legacy_type_redirects(client):
+    # workout_a/workout_b are retired for *new* live sessions — they only
+    # still work as read-only history via legacy DB rows.
     r = client.get('/workout/live/workout_a')
-    assert r.status_code == 200
+    assert r.status_code == 302
     r = client.get('/workout/live/workout_b')
-    assert r.status_code == 200
+    assert r.status_code == 302
 
 def test_live_workout_invalid_type_redirects(client):
     r = client.get('/workout/live/invalid')
@@ -60,11 +80,11 @@ def test_live_workout_invalid_type_redirects(client):
 def test_log_live_post(client):
     import json
     payload = {
-        'workout_type': 'workout_a',
+        'workout_type': 'workout_a_gym',
         'date': '2026-06-07',
         'exercises': [
-            {'name': 'Pull-up', 'sets': 3, 'reps': '8,8,7'},
-            {'name': 'Plank', 'sets': 3, 'reps': '40 sec,40 sec,40 sec'},
+            {'name': 'Squat', 'sets': 3, 'reps': '8,8,7'},
+            {'name': 'Pull-up', 'sets': 3, 'reps': '8,7,6'},
         ]
     }
     r = client.post('/log/live',
@@ -93,7 +113,7 @@ def test_delete_workout(client):
 
 def test_previous_workout_none(client):
     import json
-    r = client.get('/api/workouts/previous/workout_a')
+    r = client.get('/api/workouts/previous/workout_a_gym')
     assert r.status_code == 200
     data = json.loads(r.data)
     assert data == {'previous': None}
@@ -102,29 +122,34 @@ def test_previous_workout_invalid_type(client):
     r = client.get('/api/workouts/previous/poci')
     assert r.status_code == 400
 
+def test_previous_workout_legacy_type_invalid(client):
+    # workout_a/workout_b no longer have a live-tracking flow to resume into
+    r = client.get('/api/workouts/previous/workout_a')
+    assert r.status_code == 400
+
 def test_previous_workout_returns_last(client):
     import json
-    # Log an older workout_a
+    # Log an older workout_a_gym
     client.post('/log/live',
         data=json.dumps({
-            'workout_type': 'workout_a',
+            'workout_type': 'workout_a_gym',
             'date': '2026-01-01',
             'exercises': [{'name': 'Pull-up', 'sets': 3, 'reps': '7,7,6', 'weights': '8,8,8'}]
         }),
         content_type='application/json')
-    # Log a more recent workout_a
+    # Log a more recent workout_a_gym
     client.post('/log/live',
         data=json.dumps({
-            'workout_type': 'workout_a',
+            'workout_type': 'workout_a_gym',
             'date': '2026-01-05',
             'exercises': [{'name': 'Pull-up', 'sets': 3, 'reps': '8,8,7', 'weights': '10,10,10'}]
         }),
         content_type='application/json')
-    r = client.get('/api/workouts/previous/workout_a')
+    r = client.get('/api/workouts/previous/workout_a_gym')
     assert r.status_code == 200
     data = json.loads(r.data)
     assert data['date'] == '2026-01-05'
-    assert data['workout_type'] == 'workout_a'
+    assert data['workout_type'] == 'workout_a_gym'
     assert len(data['exercises']) == 1
     ex = data['exercises'][0]
     assert ex['name'] == 'Pull-up'
@@ -206,7 +231,7 @@ def test_save_yoga_session_invalid_key(client):
 def test_log_live_with_weights(client):
     import json
     payload = {
-        'workout_type': 'workout_a',
+        'workout_type': 'workout_a_gym',
         'date': '2026-06-08',
         'exercises': [
             {'name': 'Pull-up', 'sets': 3, 'reps': '8,8,7', 'weights': '10,10,10'}
@@ -219,9 +244,41 @@ def test_log_live_with_weights(client):
     data = json.loads(r.data)
     assert data['success'] is True
     # Verify weights were stored via the previous-workout endpoint
-    r2 = client.get('/api/workouts/previous/workout_a')
+    r2 = client.get('/api/workouts/previous/workout_a_gym')
     data2 = json.loads(r2.data)
     assert len(data2['exercises']) == 1
     ex2 = data2['exercises'][0]
     assert ex2['name'] == 'Pull-up'
     assert ex2['weights'] == ['10', '10', '10']
+
+
+def test_legacy_workout_type_still_displays(client):
+    # Simulate a workout logged before the gym/home split existed: a raw
+    # 'workout_a' row inserted straight into the DB (the current /log and
+    # /log/live endpoints no longer accept this type as input — only the
+    # 4 new gym/home types and poci/flexibility are valid going forward).
+    # Note: reuse the app context the `client` fixture already has pushed —
+    # opening a *new* app_context() here would get its own separate
+    # sqlite3.connect(':memory:') and never be seen by client.get/post.
+    db = flask_app.get_db()
+    db.execute(
+        "INSERT INTO workouts (date, type, notes, created_at) VALUES (?,?,?,?)",
+        ('2026-05-01', 'workout_a', 'legacy entry', '2026-05-01T00:00:00')
+    )
+    db.commit()
+
+    r = client.get('/history')
+    assert r.status_code == 200
+    assert b'Workout A (legacy)' in r.data
+
+    # It should also show up, unbroken, in the new unified History screen.
+    r2 = client.get('/')
+    assert r2.status_code == 200
+    assert b'Workout A (legacy)' in r2.data
+
+
+def test_valid_workout_types_are_the_four_gym_home_variants(client):
+    assert flask_app.VALID_WORKOUT_TYPES == {
+        'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home',
+        'poci', 'flexibility',
+    }
