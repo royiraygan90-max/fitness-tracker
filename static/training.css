@@ -87,12 +87,13 @@ button { font-family: inherit; }
 .tr-streak-num { font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
 .tr-streak-label { font-size: 8.5px; font-weight: 700; letter-spacing: .05em; color: var(--gold); text-transform: uppercase; margin-top: 3px; white-space: nowrap; }
 
-/* ===== Week strip ===== */
-.tr-week-strip { display: flex; gap: 8px; justify-content: space-between; }
-.tr-week-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 0; border-radius: 12px; cursor: pointer; border: none; background: transparent; }
-.tr-week-day-letter { font-size: 9.5px; font-weight: 600; color: rgba(245,243,239,.4); }
-.tr-week-day-circle { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid; display: flex; align-items: center; justify-content: center; }
-.tr-week-day-num { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; }
+/* ===== Workout A/B gym-or-home picker ===== */
+.tr-ab-row { display: flex; gap: 10px; }
+.tr-ab-card { flex: 1; padding: 16px; }
+.tr-ab-buttons { display: flex; gap: 8px; margin-top: 12px; }
+.tr-ab-btn { flex: 1; height: 42px; border-radius: 10px; border: 1.5px solid; background: transparent; color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tr-quick-row { display: flex; gap: 10px; }
+.tr-quick-btn { flex: 1; height: 46px; border-radius: 12px; border: 1.5px solid; background: transparent; font-family: 'Space Grotesk', sans-serif; font-size: 13.5px; font-weight: 700; cursor: pointer; }
 
 /* ===== Stat row ===== */
 .tr-stat-row { display: flex; gap: 10px; }
@@ -110,14 +111,8 @@ button { font-family: inherit; }
 .tr-last-session-meta { font-size: 12px; color: rgba(245,243,239,.5); margin-top: 2px; }
 .tr-chevron { flex-shrink: 0; }
 
-/* ===== Plan exercise list ===== */
 .tr-focus-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
 .tr-focus-tag { font-size: 10.5px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: rgba(111,191,160,.14); color: var(--yoga); white-space: nowrap; }
-.tr-status-tag { font-size: 10px; font-weight: 600; color: rgba(245,243,239,.45); background: rgba(255,255,255,.06); padding: 3px 9px; border-radius: 999px; }
-.tr-plan-exercises { margin-top: 14px; display: flex; flex-direction: column; }
-.tr-plan-ex-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
-.tr-plan-ex-name { font-size: 13px; color: rgba(245,243,239,.75); }
-.tr-plan-ex-target { font-size: 12.5px; color: rgba(245,243,239,.4); font-family: 'Space Grotesk', sans-serif; }
 
 /* ===== History ===== */
 .tr-chart-card { border-radius: 16px; background: var(--card); border: 1px solid var(--border); padding: 18px; }
@@ -163,7 +158,6 @@ button { font-family: inherit; }
 .tr-cue-box { margin-top: 14px; border-radius: 12px; background: var(--surface2); padding: 13px 14px; }
 .tr-cue-label { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .tr-cue-text { font-size: 13.5px; color: rgba(245,243,239,.7); margin-top: 6px; line-height: 1.5; font-style: italic; }
-.tr-demo-btn { margin-top: 14px; height: 40px; padding: 0 16px; border-radius: 10px; background: transparent; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
 
 .tr-sets-head { display: flex; align-items: center; justify-content: space-between; }
 .tr-sets-label { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: rgba(245,243,239,.4); text-transform: uppercase; }
@@ -201,14 +195,7 @@ button { font-family: inherit; }
 .tr-btn-nav.tr-btn-next { flex: 2; border: none; font-size: 14.5px; font-weight: 700; color: var(--ink); }
 .tr-btn-nav:disabled { opacity: .4; cursor: not-allowed; }
 
-/* ===== Yoga screen ===== */
-.tr-yoga-video { border-radius: 16px; overflow: hidden; border: 1px solid var(--border); position: relative; }
-.tr-yoga-video-frame { width: 100%; aspect-ratio: 16/9; background: var(--surface2); display: flex; align-items: flex-end; padding: 10px 12px; box-sizing: border-box; font-size: 11px; color: rgba(245,243,239,.3); }
-.tr-yoga-play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.tr-yoga-play-circle { width: 52px; height: 52px; border-radius: 50%; background: rgba(11,10,13,.55); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-.tr-yoga-tags-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.tr-yoga-tags-row .tr-focus-tags { margin-top: 0; }
-.tr-yt-btn { height: 36px; padding: 0 14px; border-radius: 10px; background: transparent; font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+/* ===== Generic timed session (Yoga / Poci) ===== */
 .tr-yoga-timer-card { border-radius: 18px; padding: 24px; background: var(--card); border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .tr-yoga-elapsed { font-family: 'Space Grotesk', sans-serif; font-size: 46px; font-weight: 700; color: var(--text); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
 .tr-yoga-playpause { width: 56px; height: 56px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
