@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ "Workout A" if workout_type == "workout_a" else "Workout B" }} — Live{% endblock %}
+{% block title %}{{ workout_label }} — Live{% endblock %}
 {% block content %}
 
 <style>
@@ -59,7 +59,7 @@
 
 <div id="workout-section" style="display:none">
   <div class="glass-card lw-header">
-    <h1 class="lw-title">{{ "Workout A 💪" if workout_type == "workout_a" else "Workout B 💪" }}</h1>
+    <h1 class="lw-title">{{ workout_label }} 💪</h1>
     <div class="lw-progress-text">Exercise <span id="ex-num">1</span> of <span id="ex-total">{{ exercises | length }}</span></div>
     <div class="lw-progress-bar">
       <div class="lw-progress-fill" id="progress-fill" style="width:0%"></div>
@@ -92,6 +92,7 @@
 
 <script>
 const WORKOUT_TYPE = {{ workout_type | tojson }};
+const WORKOUT_LABEL = {{ workout_label | tojson }};
 const TODAY = {{ today | tojson }};
 const EXERCISES = {{ exercises | tojson }};
 const WARMUP_ITEMS = [
@@ -447,8 +448,7 @@ function finishWorkout() {
 function showResumeOverlay(session) {
   const overlay = document.getElementById('resume-overlay');
   overlay.style.display = 'flex';
-  document.getElementById('resume-wtype').textContent =
-    session.workout_type === 'workout_a' ? 'Workout A' : 'Workout B';
+  document.getElementById('resume-wtype').textContent = WORKOUT_LABEL;
 
   let meta = '';
   if (session.phase === 'workout') {

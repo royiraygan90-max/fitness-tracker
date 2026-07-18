@@ -18,61 +18,86 @@ def format_date_filter(value):
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 
-VALID_WORKOUT_TYPES = {'workout_a', 'workout_b', 'poci', 'flexibility'}
+VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'poci', 'flexibility'}
 
-WORKOUT_A_EXERCISES = [
-    'Pull-up', 'Inverted Row', 'Wide Push-up',
-    'Face Pull (band)', 'Plank', 'Hanging Knee Raise'
+# Legacy pre-gym/home-split types. Kept only so old logged workouts still
+# display correctly (see LEGACY_WORKOUT_TYPES usage below) — nothing new is
+# ever written with these types.
+LEGACY_WORKOUT_TYPES = ('workout_a', 'workout_b')
+
+WORKOUT_A_GYM_EXERCISES = [
+    'Squat', 'Bench Press', 'Pull-up',
+    'Lateral Raise', 'Cable Bicep Curl', 'Lower Back (Superman)'
 ]
-
-WORKOUT_B_EXERCISES = [
-    'Squat (dumbbell)', 'Romanian Deadlift', 'Bulgarian Split Squat',
-    'Standing Calf Raise', 'Single-Leg Calf Raise', 'Lateral Raise', 'Shrugs'
+WORKOUT_A_HOME_EXERCISES = [
+    'Goblet Squat (dumbbell)', 'Parallette Dips', 'Pull-up',
+    'Lateral Raise (dumbbell)', 'Dumbbell Bicep Curl', 'Lower Back (Superman)'
+]
+WORKOUT_B_GYM_EXERCISES = [
+    'Romanian Deadlift', 'Upper Chest Fly (cable/pec deck)', 'Cable Row',
+    'Bulgarian Split Squat', 'Tricep Pushdown (cable)', 'Forearm Wrist Curl'
+]
+WORKOUT_B_HOME_EXERCISES = [
+    'Romanian Deadlift (dumbbell)', 'Dumbbell Shoulder Press', 'Bent-over Dumbbell Row',
+    'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Plank'
 ]
 
 LIVE_WORKOUT_EXERCISES = {
-    'workout_a': [
-        {'name': 'Pull-up', 'sets': 3, 'reps': '5–10',
-         'youtube': 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
-         'tip': "Start from dead hang. Pull shoulder blades DOWN first before pulling up. Drive elbows toward back pockets."},
-        {'name': 'Inverted Row', 'sets': 3, 'reps': '10–12',
-         'youtube': 'https://www.youtube.com/watch?v=LR0yiMqS5DI',
-         'tip': "Keep body in a straight line from head to heels. Squeeze shoulder blades together at the top."},
-        {'name': 'Wide Push-up', 'sets': 3, 'reps': '10–12',
-         'youtube': 'https://www.youtube.com/watch?v=IODxDxX7oi4',
-         'tip': "Keep core tight, don't let hips sag. Lower chest all the way to the floor."},
-        {'name': 'Face Pull (band)', 'sets': 3, 'reps': '15',
-         'youtube': 'https://www.youtube.com/watch?v=rep-qVOkqgk',
-         'tip': "Pull to eye level, not chin. Keep elbows high throughout the movement."},
-        {'name': 'Plank', 'sets': 3, 'reps': '40 sec',
-         'youtube': 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
-         'tip': "Squeeze glutes and abs together. Don't hold your breath."},
-        {'name': 'Hanging Knee Raise', 'sets': 3, 'reps': '12',
-         'youtube': 'https://www.youtube.com/watch?v=Pr1ieGZ5atk',
-         'tip': "No swinging. Control the lowering phase slowly."},
-    ],
-    'workout_b': [
-        {'name': 'Squat (dumbbell)', 'sets': 3, 'reps': '10–12',
-         'youtube': 'https://www.youtube.com/watch?v=ultWZbUMPL8',
+    'workout_a_gym': [
+        {'name': 'Squat', 'sets': 3, 'reps': '8–10', 'youtube': '',
          'tip': "Chest up, knees track over toes. Sit back like into a chair."},
-        {'name': 'Romanian Deadlift', 'sets': 3, 'reps': '10–12',
-         'youtube': 'https://www.youtube.com/watch?v=JCXUYuzwNrM',
-         'tip': "Hinge at hips, push butt back. Keep dumbbells close to legs. Stop when you feel hamstring stretch."},
-        {'name': 'Bulgarian Split Squat', 'sets': 3, 'reps': '8 each leg',
-         'youtube': 'https://www.youtube.com/watch?v=2C-uNgKwPLE',
-         'tip': "Front foot far enough forward. Keep torso upright, don't lean forward."},
-        {'name': 'Standing Calf Raise', 'sets': 4, 'reps': '15–20',
-         'youtube': 'https://www.youtube.com/watch?v=gwLzBJYoWlI',
-         'tip': "Full range — all the way up AND all the way down. Pause 1 second at the top."},
-        {'name': 'Single-Leg Calf Raise', 'sets': 3, 'reps': '12 each leg',
-         'youtube': 'https://www.youtube.com/watch?v=SjPkUNVvmE0',
-         'tip': "Hold something for balance only. Same full range as Standing Calf Raise."},
-        {'name': 'Lateral Raise', 'sets': 3, 'reps': '12–15',
-         'youtube': 'https://www.youtube.com/watch?v=3VcKaXpzqRo',
+        {'name': 'Bench Press', 'sets': 3, 'reps': '8–10', 'youtube': '',
+         'tip': "Keep shoulder blades pinned together, feet flat on the floor. Control the bar to mid-chest."},
+        {'name': 'Pull-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': '',
+         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up."},
+        {'name': 'Lateral Raise', 'sets': 3, 'reps': '12–15', 'youtube': '',
          'tip': "Slight bend in elbow. Raise to shoulder height only — no higher."},
-        {'name': 'Shrugs', 'sets': 3, 'reps': '15',
-         'youtube': 'https://www.youtube.com/watch?v=cJRVVxmytaM',
-         'tip': "Straight up and down only. Never roll shoulders — it causes injury."},
+        {'name': 'Cable Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': '',
+         'tip': "Keep elbows pinned to your sides. No swinging."},
+        {'name': 'Lower Back (Superman)', 'sets': 2, 'reps': '12', 'youtube': '',
+         'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck."},
+    ],
+    'workout_a_home': [
+        {'name': 'Goblet Squat (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': '',
+         'tip': "Hold the dumbbell at chest height, sit back and down keeping your chest tall."},
+        {'name': 'Parallette Dips', 'sets': 3, 'reps': 'to failure / 10', 'youtube': '',
+         'tip': "Lean slightly forward for chest emphasis. Control the descent, don't flare elbows too wide."},
+        {'name': 'Pull-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': '',
+         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up."},
+        {'name': 'Lateral Raise (dumbbell)', 'sets': 3, 'reps': '12–15', 'youtube': '',
+         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher."},
+        {'name': 'Dumbbell Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': '',
+         'tip': "Keep elbows pinned to your sides. Control the negative."},
+        {'name': 'Lower Back (Superman)', 'sets': 2, 'reps': '12', 'youtube': '',
+         'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck."},
+    ],
+    'workout_b_gym': [
+        {'name': 'Romanian Deadlift', 'sets': 3, 'reps': '8–10', 'youtube': '',
+         'tip': "Hinge at the hips, push hips back. Keep the bar close to your legs."},
+        {'name': 'Upper Chest Fly (cable/pec deck)', 'sets': 3, 'reps': '10–12', 'youtube': '',
+         'tip': "Slight bend in elbows, squeeze at the top, control the negative."},
+        {'name': 'Cable Row', 'sets': 3, 'reps': '10–12', 'youtube': '',
+         'tip': "Pull elbows back, squeeze shoulder blades together, keep torso still."},
+        {'name': 'Bulgarian Split Squat', 'sets': 3, 'reps': '8 each leg', 'youtube': '',
+         'tip': "Front foot far enough forward. Torso upright, control the descent."},
+        {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': '',
+         'tip': "Keep elbows pinned at your sides, full extension at the bottom."},
+        {'name': 'Forearm Wrist Curl', 'sets': 2, 'reps': '12–15', 'youtube': '',
+         'tip': "Rest forearms on a bench, curl through a full range, control the movement."},
+    ],
+    'workout_b_home': [
+        {'name': 'Romanian Deadlift (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': '',
+         'tip': "Hinge at the hips, push hips back. Keep the dumbbells close to your legs."},
+        {'name': 'Dumbbell Shoulder Press', 'sets': 3, 'reps': '8–10', 'youtube': '',
+         'tip': "Press straight overhead. Avoid arching your lower back."},
+        {'name': 'Bent-over Dumbbell Row', 'sets': 3, 'reps': '10–12', 'youtube': '',
+         'tip': "Flat back, pull elbow back and up, squeeze at the top."},
+        {'name': 'Bulgarian Split Squat (dumbbell)', 'sets': 3, 'reps': '8 each leg', 'youtube': '',
+         'tip': "Front foot far enough forward. Torso upright, control the descent."},
+        {'name': 'Tricep Kickback (dumbbell)', 'sets': 2, 'reps': '10–12', 'youtube': '',
+         'tip': "Keep your upper arm still, extend through the elbow only."},
+        {'name': 'Plank', 'sets': 2, 'reps': '30–45 sec', 'youtube': '',
+         'tip': "Squeeze glutes and abs together. Don't hold your breath."},
     ],
 }
 
@@ -86,6 +111,19 @@ YOGA_COLOR = '#6FBFA0'
 GOLD_COLOR = '#E8B84B'
 POCI_COLOR = '#F97316'
 FLEXIBILITY_COLOR = '#A855F7'
+# Gym variants are shades of blue, home variants are shades of green —
+# matches the gym/home split introduced for Workout A/B (legacy 2-type
+# workout_a/workout_b entries keep using FUNCTIONAL_COLOR, see legacy_meta).
+WORKOUT_A_GYM_COLOR = '#3B82F6'
+WORKOUT_B_GYM_COLOR = '#1D4ED8'
+WORKOUT_A_HOME_COLOR = '#22C55E'
+WORKOUT_B_HOME_COLOR = '#15803D'
+
+WORKOUT_TYPE_LABELS = {
+    'workout_a_gym': 'Workout A · Gym', 'workout_a_home': 'Workout A · Home',
+    'workout_b_gym': 'Workout B · Gym', 'workout_b_home': 'Workout B · Home',
+    'workout_a': 'Workout A (legacy)', 'workout_b': 'Workout B (legacy)',
+}
 REST_SECONDS_DEFAULT = 90
 WEEKDAY_LETTERS_EN = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
@@ -265,18 +303,18 @@ def _seed_sample_data(conn):
         return
     today = date.today()
     samples = [
-        (str(today - timedelta(days=5)), 'workout_a', 'Felt strong today', [
+        (str(today - timedelta(days=5)), 'workout_a_gym', 'Felt strong today', [
+            ('Squat', 3, '8,8,7'),
+            ('Bench Press', 3, '10,10,9'),
             ('Pull-up', 3, '8,8,7'),
-            ('Inverted Row', 3, '10,10,9'),
-            ('Wide Push-up', 3, '15,12,12'),
-            ('Plank', 3, '60s'),
+            ('Lower Back (Superman)', 2, '12,12'),
         ]),
         (str(today - timedelta(days=3)), 'poci', 'Great beach session, 2 hours', []),
-        (str(today - timedelta(days=1)), 'workout_b', 'Heavy leg day', [
-            ('Squat (dumbbell)', 4, '12,12,10,10'),
-            ('Romanian Deadlift', 3, '12,12,11'),
-            ('Bulgarian Split Squat', 3, '10,10,9'),
-            ('Lateral Raise', 3, '15,15,12'),
+        (str(today - timedelta(days=1)), 'workout_b_home', 'Heavy leg day', [
+            ('Romanian Deadlift (dumbbell)', 3, '12,12,10'),
+            ('Dumbbell Shoulder Press', 3, '10,10,9'),
+            ('Bulgarian Split Squat (dumbbell)', 3, '10,10,9'),
+            ('Plank', 2, '40s,40s'),
         ]),
     ]
     for s_date, s_type, s_notes, exercises in samples:
@@ -385,13 +423,18 @@ def _fmt_rel_date(d, today):
     return d.strftime('%b') + ' ' + str(d.day)
 
 
+_FUNCTIONAL_LEGACY_TYPES = LEGACY_WORKOUT_TYPES + tuple(VALID_WORKOUT_TYPES - {'poci', 'flexibility'})
+
+
 def _day_has_matching_session(db, d, plan_type):
     ds = str(d)
     if plan_type == 'functional':
         if db.execute("SELECT 1 FROM sessions WHERE date=? AND session_type='functional' LIMIT 1", (ds,)).fetchone():
             return True
+        placeholders = ','.join('?' * len(_FUNCTIONAL_LEGACY_TYPES))
         return db.execute(
-            "SELECT 1 FROM workouts WHERE date=? AND type IN ('workout_a','workout_b') LIMIT 1", (ds,)
+            f"SELECT 1 FROM workouts WHERE date=? AND type IN ({placeholders}) LIMIT 1",
+            (ds,) + _FUNCTIONAL_LEGACY_TYPES
         ).fetchone() is not None
     if plan_type == 'yoga':
         if db.execute("SELECT 1 FROM sessions WHERE date=? AND session_type='yoga' LIMIT 1", (ds,)).fetchone():
@@ -532,8 +575,12 @@ def _query_history(db, today, limit=None):
             })
 
     legacy_meta = {
-        'workout_a': ('functional', FUNCTIONAL_COLOR, 'Workout A (legacy)'),
-        'workout_b': ('functional', FUNCTIONAL_COLOR, 'Workout B (legacy)'),
+        'workout_a': ('functional', FUNCTIONAL_COLOR, WORKOUT_TYPE_LABELS['workout_a']),
+        'workout_b': ('functional', FUNCTIONAL_COLOR, WORKOUT_TYPE_LABELS['workout_b']),
+        'workout_a_gym': ('functional', WORKOUT_A_GYM_COLOR, WORKOUT_TYPE_LABELS['workout_a_gym']),
+        'workout_a_home': ('functional', WORKOUT_A_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_a_home']),
+        'workout_b_gym': ('functional', WORKOUT_B_GYM_COLOR, WORKOUT_TYPE_LABELS['workout_b_gym']),
+        'workout_b_home': ('functional', WORKOUT_B_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_b_home']),
         'poci': ('poci', POCI_COLOR, 'Poci'),
         'flexibility': ('flexibility', FLEXIBILITY_COLOR, 'Flexibility'),
     }
@@ -662,7 +709,7 @@ def log_workout():
         )
         workout_id = cur.lastrowid
 
-        if workout_type in ('workout_a', 'workout_b'):
+        if workout_type in ('workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home'):
             checked = request.form.getlist('exercises')
             for ex in checked:
                 sets_val = request.form.get(f'sets_{ex}', '0')
@@ -681,8 +728,10 @@ def log_workout():
         return redirect(url_for('dashboard'))
 
     return render_template('log_workout.html',
-        workout_a_exercises=WORKOUT_A_EXERCISES,
-        workout_b_exercises=WORKOUT_B_EXERCISES,
+        workout_a_gym_exercises=WORKOUT_A_GYM_EXERCISES,
+        workout_a_home_exercises=WORKOUT_A_HOME_EXERCISES,
+        workout_b_gym_exercises=WORKOUT_B_GYM_EXERCISES,
+        workout_b_home_exercises=WORKOUT_B_HOME_EXERCISES,
         today=str(date.today()))
 
 
@@ -735,7 +784,7 @@ def delete_workout(workout_id):
 
 @app.route('/api/workouts/previous/<workout_type>')
 def previous_workout(workout_type):
-    if workout_type not in ('workout_a', 'workout_b'):
+    if workout_type not in LIVE_WORKOUT_EXERCISES:
         return jsonify({'error': 'Invalid workout type'}), 400
     db = get_db()
     row = db.execute(
@@ -767,11 +816,12 @@ def previous_workout(workout_type):
 
 @app.route('/workout/live/<workout_type>')
 def live_workout(workout_type):
-    if workout_type not in ('workout_a', 'workout_b'):
+    if workout_type not in LIVE_WORKOUT_EXERCISES:
         return redirect(url_for('dashboard'))
     exercises = LIVE_WORKOUT_EXERCISES[workout_type]
     return render_template('live_workout.html',
         workout_type=workout_type,
+        workout_label=WORKOUT_TYPE_LABELS.get(workout_type, workout_type),
         exercises=exercises,
         today=str(date.today()))
 

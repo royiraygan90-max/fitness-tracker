@@ -11,17 +11,29 @@
   <div class="glass-card" id="step-type">
     <h2 class="card-title">Step 1 — Select Workout Type</h2>
     <div class="type-grid">
-      <label class="type-card type-workout_a">
-        <input type="radio" name="workout_type" value="workout_a" required>
-        <span class="type-icon">💪</span>
+      <label class="type-card type-workout_a_gym">
+        <input type="radio" name="workout_type" value="workout_a_gym" required>
+        <span class="type-icon">🏋️</span>
         <span class="type-name">Workout A</span>
-        <span class="type-sub">Upper Body Push/Pull</span>
+        <span class="type-sub">Gym</span>
       </label>
-      <label class="type-card type-workout_b">
-        <input type="radio" name="workout_type" value="workout_b" required>
-        <span class="type-icon">💪</span>
+      <label class="type-card type-workout_a_home">
+        <input type="radio" name="workout_type" value="workout_a_home" required>
+        <span class="type-icon">🏠</span>
+        <span class="type-name">Workout A</span>
+        <span class="type-sub">Home</span>
+      </label>
+      <label class="type-card type-workout_b_gym">
+        <input type="radio" name="workout_type" value="workout_b_gym" required>
+        <span class="type-icon">🏋️</span>
         <span class="type-name">Workout B</span>
-        <span class="type-sub">Lower Body + Shoulders</span>
+        <span class="type-sub">Gym</span>
+      </label>
+      <label class="type-card type-workout_b_home">
+        <input type="radio" name="workout_type" value="workout_b_home" required>
+        <span class="type-icon">🏠</span>
+        <span class="type-name">Workout B</span>
+        <span class="type-sub">Home</span>
       </label>
       <label class="type-card type-poci">
         <input type="radio" name="workout_type" value="poci" required>
@@ -48,8 +60,8 @@
   <div class="glass-card" id="exercise-section" style="display:none">
     <h2 class="card-title">Step 3 — Exercises</h2>
 
-    <div id="exercises-workout_a" class="exercise-list" style="display:none">
-      {% for ex in workout_a_exercises %}
+    <div id="exercises-workout_a_gym" class="exercise-list" style="display:none">
+      {% for ex in workout_a_gym_exercises %}
         <div class="exercise-row">
           <label class="exercise-check">
             <input type="checkbox" name="exercises" value="{{ ex }}" class="ex-checkbox">
@@ -70,8 +82,52 @@
       {% endfor %}
     </div>
 
-    <div id="exercises-workout_b" class="exercise-list" style="display:none">
-      {% for ex in workout_b_exercises %}
+    <div id="exercises-workout_a_home" class="exercise-list" style="display:none">
+      {% for ex in workout_a_home_exercises %}
+        <div class="exercise-row">
+          <label class="exercise-check">
+            <input type="checkbox" name="exercises" value="{{ ex }}" class="ex-checkbox">
+            <span class="checkmark"></span>
+            <span class="ex-name">{{ ex }}</span>
+          </label>
+          <div class="exercise-inputs" style="display:none">
+            <div class="input-group">
+              <label>Sets</label>
+              <input type="number" name="sets_{{ ex }}" min="1" max="10" value="3" class="small-input">
+            </div>
+            <div class="input-group">
+              <label>Reps</label>
+              <input type="text" name="reps_{{ ex }}" placeholder="e.g. 8,8,7" class="small-input">
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div id="exercises-workout_b_gym" class="exercise-list" style="display:none">
+      {% for ex in workout_b_gym_exercises %}
+        <div class="exercise-row">
+          <label class="exercise-check">
+            <input type="checkbox" name="exercises" value="{{ ex }}" class="ex-checkbox">
+            <span class="checkmark"></span>
+            <span class="ex-name">{{ ex }}</span>
+          </label>
+          <div class="exercise-inputs" style="display:none">
+            <div class="input-group">
+              <label>Sets</label>
+              <input type="number" name="sets_{{ ex }}" min="1" max="10" value="3" class="small-input">
+            </div>
+            <div class="input-group">
+              <label>Reps</label>
+              <input type="text" name="reps_{{ ex }}" placeholder="e.g. 12,12,10" class="small-input">
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div id="exercises-workout_b_home" class="exercise-list" style="display:none">
+      {% for ex in workout_b_home_exercises %}
         <div class="exercise-row">
           <label class="exercise-check">
             <input type="checkbox" name="exercises" value="{{ ex }}" class="ex-checkbox">

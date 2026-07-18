@@ -18,8 +18,10 @@ const typeRadios = document.querySelectorAll('input[name="workout_type"]');
 const exerciseSection = document.getElementById('exercise-section');
 const notesLabel = document.getElementById('notes-label');
 
+const WORKOUT_TYPES = ['workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home'];
+
 function updateFormForType(type) {
-  const isWorkout = type === 'workout_a' || type === 'workout_b';
+  const isWorkout = WORKOUT_TYPES.includes(type);
   if (exerciseSection) {
     exerciseSection.style.display = isWorkout ? 'block' : 'none';
   }
@@ -28,7 +30,7 @@ function updateFormForType(type) {
   }
 
   // Show/hide correct exercise list
-  ['workout_a', 'workout_b'].forEach(t => {
+  WORKOUT_TYPES.forEach(t => {
     const el = document.getElementById(`exercises-${t}`);
     if (el) el.style.display = (type === t) ? 'block' : 'none';
   });

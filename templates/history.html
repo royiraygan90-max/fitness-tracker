@@ -6,11 +6,24 @@
   <h1 class="page-title">History</h1>
 </div>
 
+{% set type_labels = {
+  'workout_a_gym': '🏋️ Workout A · Gym',
+  'workout_a_home': '🏠 Workout A · Home',
+  'workout_b_gym': '🏋️ Workout B · Gym',
+  'workout_b_home': '🏠 Workout B · Home',
+  'workout_a': '💪 Workout A (legacy)',
+  'workout_b': '💪 Workout B (legacy)',
+  'poci': '🏐 Poci',
+  'flexibility': '🧘 Flexibility',
+} %}
+
 <!-- Filter tabs -->
 <div class="filter-tabs">
   <a href="{{ url_for('history') }}" class="filter-tab {% if filter_type == 'all' %}active{% endif %}">All</a>
-  <a href="{{ url_for('history', type='workout_a') }}" class="filter-tab type-workout_a {% if filter_type == 'workout_a' %}active{% endif %}">💪 Workout A</a>
-  <a href="{{ url_for('history', type='workout_b') }}" class="filter-tab type-workout_b {% if filter_type == 'workout_b' %}active{% endif %}">💪 Workout B</a>
+  <a href="{{ url_for('history', type='workout_a_gym') }}" class="filter-tab type-workout_a_gym {% if filter_type == 'workout_a_gym' %}active{% endif %}">🏋️ Workout A · Gym</a>
+  <a href="{{ url_for('history', type='workout_a_home') }}" class="filter-tab type-workout_a_home {% if filter_type == 'workout_a_home' %}active{% endif %}">🏠 Workout A · Home</a>
+  <a href="{{ url_for('history', type='workout_b_gym') }}" class="filter-tab type-workout_b_gym {% if filter_type == 'workout_b_gym' %}active{% endif %}">🏋️ Workout B · Gym</a>
+  <a href="{{ url_for('history', type='workout_b_home') }}" class="filter-tab type-workout_b_home {% if filter_type == 'workout_b_home' %}active{% endif %}">🏠 Workout B · Home</a>
   <a href="{{ url_for('history', type='poci') }}" class="filter-tab type-poci {% if filter_type == 'poci' %}active{% endif %}">🏐 Poci</a>
   <a href="{{ url_for('history', type='flexibility') }}" class="filter-tab type-flexibility {% if filter_type == 'flexibility' %}active{% endif %}">🧘 Flexibility</a>
 </div>
@@ -22,10 +35,7 @@
         <div class="history-header">
           <div class="history-meta">
             <span class="type-badge type-{{ w.type }}">
-              {% if w.type == 'workout_a' %}💪 Workout A
-              {% elif w.type == 'workout_b' %}💪 Workout B
-              {% elif w.type == 'poci' %}🏐 Poci
-              {% else %}🧘 Flexibility{% endif %}
+              {{ type_labels.get(w.type, '❔ ' + w.type) }}
             </span>
             <span class="history-date">{{ w.date | format_date }}</span>
           </div>
