@@ -121,6 +121,17 @@ WORKOUT_TYPE_LABELS = {
 }
 REST_SECONDS_DEFAULT = 90
 
+# Workout types plannable on the Home calendar — same set offered by the
+# Home screen's Gym/Home buttons and Yoga/Poci quick-start buttons.
+PLAN_META = {
+    'workout_a_gym': (WORKOUT_A_GYM_COLOR, WORKOUT_TYPE_LABELS['workout_a_gym'], 'functional'),
+    'workout_a_home': (WORKOUT_A_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_a_home'], 'functional'),
+    'workout_b_gym': (WORKOUT_B_GYM_COLOR, WORKOUT_TYPE_LABELS['workout_b_gym'], 'functional'),
+    'workout_b_home': (WORKOUT_B_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_b_home'], 'functional'),
+    'yoga': (YOGA_COLOR, 'Yoga', 'yoga'),
+    'poci': (POCI_COLOR, 'Poci', 'poci'),
+}
+
 # The Home/Plan/History app's live-tracking content — derived from
 # LIVE_WORKOUT_EXERCISES so there's a single source of truth for exercise
 # names/sets/reps/cues, shared with the /workout/live/<type> legacy flow.
@@ -217,6 +228,11 @@ def _create_tables(conn):
         CREATE TABLE IF NOT EXISTS exercise_notes (
             exercise_id TEXT PRIMARY KEY,
             note TEXT
+        );
+        CREATE TABLE IF NOT EXISTS planned_workouts (
+            date TEXT PRIMARY KEY,
+            workout_key TEXT NOT NULL,
+            created_at TEXT NOT NULL
         );
     ''')
     conn.commit()
@@ -397,7 +413,7 @@ def _query_history(db, today, limit=None):
             items.append({
                 'id': 's' + str(r['id']), 'category': 'functional', 'legacy': False, 'accent': FUNCTIONAL_COLOR,
                 'title': w['label'] if w else (r['workout_key'] or 'Workout'),
-                'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': r['pr_count'] or 0,
                 'exercises': [{'name': v['name'], 'sets': ', '.join(v['sets'])} for v in by_ex.values()],
                 'notes': '', 'focusTags': [],
@@ -405,14 +421,14 @@ def _query_history(db, today, limit=None):
         elif r['session_type'] == 'poci':
             items.append({
                 'id': 's' + str(r['id']), 'category': 'poci', 'legacy': False, 'accent': POCI_COLOR,
-                'title': 'Poci', 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'title': 'Poci', 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
                 'exercises': [], 'notes': r['notes'] or '', 'focusTags': [],
             })
         else:
             items.append({
                 'id': 's' + str(r['id']), 'category': 'yoga', 'legacy': False, 'accent': YOGA_COLOR,
-                'title': 'Yoga Session', 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'title': 'Yoga Session', 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
                 'exercises': [], 'notes': r['notes'] or '', 'focusTags': [],
             })
@@ -446,7 +462,7 @@ def _query_history(db, today, limit=None):
                     exercises.append({'name': parts[0], 'sets': _format_legacy_exercise_line(parts[0], sets, reps, weight_kg)})
         items.append({
             'id': 'w' + str(r['id']), 'category': category, 'legacy': True, 'accent': accent,
-            'title': title, 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+            'title': title, 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
             'durationMin': None, 'prCount': 0, 'exercises': exercises, 'notes': r['notes'] or '', 'focusTags': [],
         })
 
@@ -481,6 +497,40 @@ def _progress_chart(db, today):
     return out
 
 
+def _build_calendar_week(db, today, start):
+    """7 days from `start` (a Sunday) — each day is either a completed
+    session ('done'), a workout planned for a future/today date but not
+    yet done ('planned'), or nothing ('empty')."""
+    by_date = {}
+    for h in _query_history(db, today):
+        by_date.setdefault(h['date'], h)
+    plan_rows = db.execute(
+        'SELECT date, workout_key FROM planned_workouts WHERE date BETWEEN ? AND ?',
+        (str(start), str(start + timedelta(days=6)))
+    ).fetchall()
+    plans = {r['date']: r['workout_key'] for r in plan_rows}
+
+    days = []
+    for i in range(7):
+        d = start + timedelta(days=i)
+        ds = str(d)
+        entry = {
+            'date': ds, 'dayLabel': d.strftime('%a').upper(), 'dayNum': d.day,
+            'isToday': d == today, 'isFuture': d > today,
+        }
+        h = by_date.get(ds)
+        plan_key = plans.get(ds)
+        if h:
+            entry.update(status='done', title=h['title'], accent=h['accent'], category=h['category'], prCount=h['prCount'])
+        elif plan_key and plan_key in PLAN_META:
+            accent, label, category = PLAN_META[plan_key]
+            entry.update(status='planned', workoutKey=plan_key, title=label, accent=accent, category=category)
+        else:
+            entry.update(status='empty')
+        days.append(entry)
+    return days
+
+
 def _build_initial_data(db):
     today = date.today()
     today_idx = _weekday_sun0(today)
@@ -498,6 +548,7 @@ def _build_initial_data(db):
     # Sessions logged from this Sun-Sat week through today — a simple
     # activity count, not tied to any required schedule.
     week_count = sum(1 for h in history if h['daysAgo'] <= today_idx)
+    week_start = today - timedelta(days=today_idx)
 
     return {
         'today': str(today),
@@ -511,6 +562,7 @@ def _build_initial_data(db):
         'exerciseNotes': {r['exercise_id']: r['note'] for r in db.execute('SELECT exercise_id, note FROM exercise_notes').fetchall()},
         'history': history,
         'progressChart': _progress_chart(db, today), 'progressChartLabel': PROGRESS_CHART_EXERCISE_LABEL,
+        'calendarWeekStart': str(week_start), 'calendarWeek': _build_calendar_week(db, today, week_start),
     }
 
 
@@ -519,6 +571,43 @@ def dashboard():
     db = get_db()
     initial_data = _build_initial_data(db)
     return render_template('training_app.html', initial_data=initial_data)
+
+
+@app.route('/api/calendar')
+def get_calendar_week():
+    try:
+        start = datetime.strptime(request.args.get('start', ''), '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid start date'}), 400
+    db = get_db()
+    days = _build_calendar_week(db, date.today(), start)
+    return jsonify({'start': str(start), 'days': days})
+
+
+@app.route('/api/calendar/plan', methods=['POST'])
+def set_planned_workout():
+    data = request.get_json(silent=True) or {}
+    try:
+        d = datetime.strptime(data.get('date', ''), '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid date'}), 400
+    if d < date.today():
+        return jsonify({'error': 'Cannot plan a past date'}), 400
+
+    workout_key = data.get('workoutKey')
+    db = get_db()
+    if workout_key is None:
+        db.execute('DELETE FROM planned_workouts WHERE date=?', (str(d),))
+    else:
+        if workout_key not in PLAN_META:
+            return jsonify({'error': 'Invalid workout key'}), 400
+        db.execute(
+            'INSERT INTO planned_workouts (date, workout_key, created_at) VALUES (?,?,?) '
+            'ON CONFLICT(date) DO UPDATE SET workout_key=excluded.workout_key, created_at=excluded.created_at',
+            (str(d), workout_key, datetime.now().isoformat())
+        )
+    db.commit()
+    return jsonify({'success': True})
 
 
 @app.route('/log', methods=['GET', 'POST'])
@@ -752,6 +841,7 @@ def save_functional_session():
                 (exercise_id, str(note_text)[:1000])
             )
     db.execute('UPDATE sessions SET pr_count=? WHERE id=?', (pr_count, session_id))
+    db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
     db.commit()
     return jsonify({'success': True, 'prCount': pr_count})
 
@@ -779,6 +869,7 @@ def save_generic_session():
         'INSERT INTO sessions (date, session_type, duration_sec, notes, created_at) VALUES (?,?,?,?,?)',
         (session_date, category, duration_sec, notes, datetime.now().isoformat())
     )
+    db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
     db.commit()
     return jsonify({'success': True})
 

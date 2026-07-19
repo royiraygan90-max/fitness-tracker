@@ -35,13 +35,29 @@
     sessionPRCount: 0,
     completionStats: null,
     saving: false,
+    calendarWeekStart: D.calendarWeekStart,
+    calendarDays: D.calendarWeek,
+    calendarLoading: false,
+    planSheetDate: null,
   };
 
   const els = {
     root: document.getElementById('screen-root'),
     tabBar: document.getElementById('tab-bar'),
     toastRoot: document.getElementById('toast-root'),
+    sheetRoot: document.getElementById('sheet-root'),
   };
+
+  const PLAN_OPTIONS = [
+    ['workout_a_gym', 'Workout A · Gym'], ['workout_a_home', 'Workout A · Home'],
+    ['workout_b_gym', 'Workout B · Gym'], ['workout_b_home', 'Workout B · Home'],
+    ['yoga', 'Yoga'], ['poci', 'Poci'],
+  ];
+  function planOptionColor(key) {
+    if (key === 'yoga') return COLORS.yoga;
+    if (key === 'poci') return COLORS.poci;
+    return COLORS.functional;
+  }
 
   let toastTimer = null;
   let tickTimer = null;
@@ -61,6 +77,14 @@
   }
   function genericLabel(category) { return category === 'poci' ? 'Poci Session' : 'Yoga Session'; }
   function genericColor(category) { return category === 'poci' ? COLORS.poci : COLORS.yoga; }
+  function shiftDateStr(dateStr, days) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+  function fmtMonthDay(dateStr) {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
 
   // ---------- persistence ----------
   function saveSession() {
@@ -97,6 +121,28 @@
     if (!state.toast) { els.toastRoot.innerHTML = ''; return; }
     const dot = state.toast.tone === 'gold' ? COLORS.gold : 'rgba(255,255,255,.6)';
     els.toastRoot.innerHTML = `<div class="tr-toast"><div class="tr-dot" style="background:${dot}"></div><span class="tr-toast-text">${esc(state.toast.msg)}</span></div>`;
+  }
+
+  // ---------- plan sheet (tap a calendar day to plan/clear a workout) ----------
+  function renderPlanSheet() {
+    if (!state.planSheetDate || state.screen !== 'home') { els.sheetRoot.innerHTML = ''; return; }
+    const day = state.calendarDays.find(d => d.date === state.planSheetDate);
+    const dateLabel = new Date(state.planSheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    els.sheetRoot.innerHTML = `<div class="tr-sheet-backdrop" onclick="App.closePlanSheet()">
+      <div class="tr-sheet" onclick="event.stopPropagation()">
+        <div class="tr-sheet-title">Plan a workout</div>
+        <div class="tr-sheet-sub">${esc(dateLabel)}</div>
+        <div class="tr-sheet-options">
+          ${PLAN_OPTIONS.map(([key, label]) => {
+            const color = planOptionColor(key);
+            const active = day && day.workoutKey === key;
+            return `<button class="tr-sheet-opt${active ? ' tr-sheet-opt-active' : ''}" style="border-color:${color};${active ? `background:${color}22;` : ''}" onclick="App.setPlan('${key}')">${label}</button>`;
+          }).join('')}
+        </div>
+        ${day && day.status === 'planned' ? `<button class="tr-sheet-clear" onclick="App.clearPlan()">Clear plan</button>` : ''}
+        <button class="tr-sheet-cancel" onclick="App.closePlanSheet()">Cancel</button>
+      </div>
+    </div>`;
   }
 
   // ---------- icons ----------
@@ -146,6 +192,39 @@
     </div>`;
   }
 
+  function calendarDayCell(day) {
+    const tappable = day.status !== 'done' && (day.isToday || day.isFuture);
+    let dotStyle;
+    if (day.status === 'done') dotStyle = `background:${day.accent}`;
+    else if (day.status === 'planned') dotStyle = `background:transparent;border:1.5px solid ${day.accent}`;
+    else dotStyle = 'background:transparent';
+    return `<div class="tr-cal-day${day.isToday ? ' tr-cal-day-today' : ''}${tappable ? ' tr-cal-day-tappable' : ''}"
+        ${tappable ? `onclick="App.openPlanSheet('${day.date}')"` : ''}>
+      <div class="tr-cal-day-label">${esc(day.dayLabel)}</div>
+      <div class="tr-cal-day-num">${day.dayNum}</div>
+      <div class="tr-cal-dot" style="${dotStyle}"></div>
+    </div>`;
+  }
+
+  function renderCalendar() {
+    const days = state.calendarDays;
+    const rangeLabel = fmtMonthDay(days[0].date) + ' – ' + fmtMonthDay(days[6].date);
+    const isCurrentWeek = state.calendarWeekStart === D.calendarWeekStart;
+    return `<div class="tr-cal-card">
+      <div class="tr-cal-head">
+        <button class="tr-cal-nav tr-cal-nav-prev" onclick="App.calendarPrevWeek()" aria-label="Previous week">${iconChevron('rgba(245,243,239,.6)')}</button>
+        <div class="tr-cal-range-block">
+          <div class="tr-cal-range">${esc(rangeLabel)}</div>
+          ${isCurrentWeek ? '' : '<button class="tr-cal-today-btn" onclick="App.calendarToday()">Today</button>'}
+        </div>
+        <button class="tr-cal-nav tr-cal-nav-next" onclick="App.calendarNextWeek()" aria-label="Next week">${iconChevron('rgba(245,243,239,.6)')}</button>
+      </div>
+      <div class="tr-cal-days" style="opacity:${state.calendarLoading ? 0.4 : 1}">
+        ${days.map(calendarDayCell).join('')}
+      </div>
+    </div>`;
+  }
+
   function renderHome() {
     const resume = loadSavedSession();
     const resumeBanner = resume ? `<div class="tr-resume-banner">
@@ -161,6 +240,8 @@
         </div>
         ${D.showGamification ? `<div class="tr-streak"><div class="tr-streak-num">${D.streak}</div><div class="tr-streak-label">day streak</div></div>` : ''}
       </div>
+
+      ${renderCalendar()}
 
       <div class="tr-ab-row">
         ${abCard('A', 'workout_a_gym', 'workout_a_home')}
@@ -462,6 +543,7 @@
     renderScreen();
     renderTabBar();
     renderToast();
+    renderPlanSheet();
   }
 
   // ---------- actions ----------
@@ -469,6 +551,7 @@
     goTab(tab) {
       state.activeTab = tab;
       state.screen = tab;
+      state.planSheetDate = null;
       render();
     },
     startFunctional(key) {
@@ -661,6 +744,64 @@
       if (!s) { renderScreen(); return; }
       Object.assign(state, s);
       render();
+    },
+
+    calendarPrevWeek() { App.calendarGoToWeek(shiftDateStr(state.calendarWeekStart, -7)); },
+    calendarNextWeek() { App.calendarGoToWeek(shiftDateStr(state.calendarWeekStart, 7)); },
+    calendarToday() { App.calendarGoToWeek(D.calendarWeekStart); },
+    calendarGoToWeek(startStr) {
+      if (startStr === state.calendarWeekStart) return;
+      state.calendarWeekStart = startStr;
+      if (startStr === D.calendarWeekStart) {
+        state.calendarDays = D.calendarWeek;
+        state.calendarLoading = false;
+        renderScreen();
+        return;
+      }
+      state.calendarLoading = true;
+      renderScreen();
+      fetch('/api/calendar?start=' + encodeURIComponent(startStr))
+        .then(r => r.json())
+        .then(res => {
+          if (state.calendarWeekStart !== startStr) return; // navigated again before this resolved
+          state.calendarDays = res.days;
+          state.calendarLoading = false;
+          renderScreen();
+        })
+        .catch(() => {
+          state.calendarLoading = false;
+          showToast('Could not load that week — check your connection', 'neutral');
+          renderScreen();
+        });
+    },
+    openPlanSheet(dateStr) { state.planSheetDate = dateStr; renderPlanSheet(); },
+    closePlanSheet() { state.planSheetDate = null; renderPlanSheet(); },
+    setPlan(workoutKey) {
+      const dateStr = state.planSheetDate;
+      if (!dateStr) return;
+      state.planSheetDate = null;
+      renderPlanSheet();
+      fetch('/api/calendar/plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateStr, workoutKey }),
+      }).then(r => r.json()).then(() => App.refreshCalendarWeek())
+        .catch(() => showToast('Could not save plan — try again', 'neutral'));
+    },
+    clearPlan() {
+      const dateStr = state.planSheetDate;
+      if (!dateStr) return;
+      state.planSheetDate = null;
+      renderPlanSheet();
+      fetch('/api/calendar/plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateStr, workoutKey: null }),
+      }).then(r => r.json()).then(() => App.refreshCalendarWeek())
+        .catch(() => showToast('Could not clear plan — try again', 'neutral'));
+    },
+    refreshCalendarWeek() {
+      fetch('/api/calendar?start=' + encodeURIComponent(state.calendarWeekStart))
+        .then(r => r.json())
+        .then(res => { state.calendarDays = res.days; renderScreen(); });
     },
   };
   window.App = App;
