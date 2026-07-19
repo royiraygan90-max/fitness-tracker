@@ -148,6 +148,7 @@
   // ---------- icons ----------
   function iconHome(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/></svg>`; }
   function iconHistory(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="${c}" stroke-width="1.8"/><path d="M12 7.5V12L15.5 14.5" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+  function iconCoach(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 17L10 11L14 15L20 7" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5 7H20V12.5" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconChevron(c) { return `<svg width="7" height="12" viewBox="0 0 7 12"><path d="M1 1L6 6L1 11" stroke="${c || 'rgba(245,243,239,.3)'}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconClose() { return `<svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1L13 13M13 1L1 13" stroke="rgba(245,243,239,.8)" stroke-width="1.7" stroke-linecap="round"/></svg>`; }
   function iconPlayBig(fill) { return `<svg width="16" height="18" viewBox="0 0 16 18"><path d="M0 0L16 9L0 18V0Z" fill="${fill || '#0B0A0D'}"/></svg>`; }
@@ -155,10 +156,10 @@
 
   // ---------- tab bar ----------
   function renderTabBar() {
-    const show = ['home', 'history'].includes(state.screen);
+    const show = ['home', 'coach', 'history'].includes(state.screen);
     if (!show) { els.tabBar.innerHTML = ''; els.tabBar.style.display = 'none'; return; }
     els.tabBar.style.display = 'flex';
-    const tabs = [['home', 'Home', iconHome], ['history', 'History', iconHistory]];
+    const tabs = [['home', 'Home', iconHome], ['coach', 'Coach', iconCoach], ['history', 'History', iconHistory]];
     els.tabBar.innerHTML = tabs.map(([key, label, icon]) => {
       const active = state.activeTab === key;
       const color = active ? '#F5F3EF' : 'rgba(245,243,239,.35)';
@@ -337,6 +338,43 @@
     </div>`;
   }
 
+  // ---------- Coach ----------
+  function coachExerciseRow(ex) {
+    const ready = ex.status === 'increase';
+    return `<div class="tr-coach-row">
+      <div class="tr-dot" style="background:${ready ? COLORS.gold : 'rgba(245,243,239,.25)'}"></div>
+      <div style="flex:1">
+        <div class="tr-coach-row-name">${esc(ex.name)}</div>
+        <div class="tr-coach-row-tip">${ready
+          ? `Hit ${esc(ex.repCeiling)} reps on every set at ${esc(ex.lastWeight)}kg — try ${esc(ex.suggestedWeight)}kg next time`
+          : `Last: ${esc(ex.lastWeight)}kg — aim for ${esc(ex.repCeiling)} reps on all sets before adding weight`}</div>
+      </div>
+    </div>`;
+  }
+
+  function renderCoach() {
+    const c = D.coach;
+    const pct = Math.round((c.cycleWeek / c.cycleLengthWeeks) * 100);
+    els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
+      <div class="tr-greeting" style="margin-top:0">Coach</div>
+
+      <div class="tr-card tr-cycle-card">
+        <div class="tr-card-eyebrow" style="color:${COLORS.gold}">TRAINING CYCLE</div>
+        <div class="tr-card-title" style="font-size:19px">${c.cycleComplete ? 'Time to refresh your program' : `Week ${c.cycleWeek} of ${c.cycleLengthWeeks}`}</div>
+        <div class="tr-progress-bar" style="margin-top:12px"><div class="tr-progress-fill" style="width:${pct}%;background:${COLORS.gold}"></div></div>
+        <div class="tr-card-preview">${c.cycleComplete
+          ? "You've completed a full training block. To keep progressing safely and hit every muscle group, consider rotating 1–2 exercises for variety, adjusting a rep range, or taking a lighter deload week (roughly half your normal sets at the same weight) before starting the next block."
+          : "A focused training block usually runs 6–8 weeks before it's worth rotating exercises or taking a deload week — keep logging your sessions and check back here."}</div>
+        ${c.cycleComplete ? `<button class="tr-btn-cta" style="background:${COLORS.gold}" onclick="App.startNewCycle()">Start New ${c.cycleLengthWeeks}-Week Cycle</button>` : ''}
+      </div>
+
+      <div class="tr-card-eyebrow" style="color:rgba(245,243,239,.4)">PROGRESSIVE OVERLOAD</div>
+      <div class="tr-card tr-coach-list-card">
+        ${c.exercises.length ? c.exercises.map(coachExerciseRow).join('') : '<div class="tr-empty">Log a few sessions and personalized progress tips will show up here.</div>'}
+      </div>
+    </div></div>`;
+  }
+
   // ---------- Warmup ----------
   function renderWarmup() {
     const item = WARMUP_ITEMS[state.warmupIdx];
@@ -407,6 +445,7 @@
             <div class="tr-sets-label">Sets</div>
             <div class="tr-sets-last">${ex.lastWeight ? 'Last: ' + fmtNum(ex.lastWeight) + 'kg × ' + ex.lastReps : ''}</div>
           </div>
+          ${ex.coachTip ? `<div class="tr-coach-tip-inline">${esc(ex.coachTip)}</div>` : ''}
           <div class="tr-note-row">
             <span class="tr-note-label">Note</span>
             <input type="text" class="tr-note-input" value="${esc(state.exerciseNotesDraft[ex.id] || '')}" placeholder="e.g. felt easy — add weight next time" oninput="App.changeNote('${ex.id}', this.value)"/>
@@ -534,6 +573,7 @@
   function renderScreen() {
     if (state.screen === 'home') renderHome();
     else if (state.screen === 'history') renderHistory();
+    else if (state.screen === 'coach') renderCoach();
     else if (state.screen === 'warmup') renderWarmup();
     else if (state.screen === 'live-functional') renderLiveFunctional();
     else if (state.screen === 'live-generic') renderLiveGeneric();
@@ -802,6 +842,18 @@
       fetch('/api/calendar?start=' + encodeURIComponent(state.calendarWeekStart))
         .then(r => r.json())
         .then(res => { state.calendarDays = res.days; renderScreen(); });
+    },
+    startNewCycle() {
+      fetch('/api/coach/new-cycle', { method: 'POST' })
+        .then(r => r.json())
+        .then(res => {
+          D.coach.cycleStartDate = res.cycleStartDate;
+          D.coach.cycleWeek = res.cycleWeek;
+          D.coach.cycleComplete = res.cycleComplete;
+          showToast('New training cycle started — fresh start!', 'gold');
+          renderScreen();
+        })
+        .catch(() => showToast('Could not start a new cycle — try again', 'neutral'));
     },
   };
   window.App = App;

@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, g
@@ -37,62 +38,67 @@ WORKOUT_B_HOME_EXERCISES = [
     'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Plank'
 ]
 
+# progression_kg is the suggested weight jump for the Coach's double-progression
+# tips once every set hits the top of the rep range: 5kg for leg-dominant
+# compounds, 2.5kg for everything else, None for time-held exercises (Plank)
+# that aren't progressed by adding weight. See _suggested_increment_kg() for
+# how this gets capped for lighter/bodyweight loads.
 LIVE_WORKOUT_EXERCISES = {
     'workout_a_gym': [
         {'name': 'Squat', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/watch?v=8PMjqgR8Wa8',
-         'tip': "Chest up, knees track over toes. Sit back like into a chair."},
+         'tip': "Chest up, knees track over toes. Sit back like into a chair.", 'progression_kg': 5},
         {'name': 'Bench Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/watch?v=Pp8rHcFVIYg',
-         'tip': "Keep shoulder blades pinned together, feet flat on the floor. Control the bar to mid-chest."},
+         'tip': "Keep shoulder blades pinned together, feet flat on the floor. Control the bar to mid-chest.", 'progression_kg': 2.5},
         {'name': 'Pull-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
-         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up."},
+         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up.", 'progression_kg': 2.5},
         {'name': 'Lateral Raise', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=3VcKaXpzqRo',
-         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher."},
+         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher.", 'progression_kg': 2.5},
         {'name': 'Cable Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=5z4y7QRTx1w',
-         'tip': "Keep elbows pinned to your sides. No swinging."},
+         'tip': "Keep elbows pinned to your sides. No swinging.", 'progression_kg': 2.5},
         {'name': 'Lower Back (Superman)', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/watch?v=jTNpZIl1qU0',
-         'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck."},
+         'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck.", 'progression_kg': 2.5},
     ],
     'workout_a_home': [
         {'name': 'Goblet Squat (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=gCESNsDsbqk',
-         'tip': "Hold the dumbbell at chest height, sit back and down keeping your chest tall."},
+         'tip': "Hold the dumbbell at chest height, sit back and down keeping your chest tall.", 'progression_kg': 5},
         {'name': 'Parallette Dips', 'sets': 3, 'reps': 'to failure / 10', 'youtube': 'https://www.youtube.com/watch?v=0EPpumD8eeI',
-         'tip': "Lean slightly forward for chest emphasis. Control the descent, don't flare elbows too wide."},
+         'tip': "Lean slightly forward for chest emphasis. Control the descent, don't flare elbows too wide.", 'progression_kg': 2.5},
         {'name': 'Pull-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
-         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up."},
+         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up.", 'progression_kg': 2.5},
         {'name': 'Lateral Raise (dumbbell)', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=3VcKaXpzqRo',
-         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher."},
+         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher.", 'progression_kg': 2.5},
         {'name': 'Dumbbell Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=XE_pHwbst04',
-         'tip': "Keep elbows pinned to your sides. Control the negative."},
+         'tip': "Keep elbows pinned to your sides. Control the negative.", 'progression_kg': 2.5},
         {'name': 'Lower Back (Superman)', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/watch?v=jTNpZIl1qU0',
-         'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck."},
+         'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck.", 'progression_kg': 2.5},
     ],
     'workout_b_gym': [
         {'name': 'Romanian Deadlift', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/watch?v=JCXUYuzwNrM',
-         'tip': "Hinge at the hips, push hips back. Keep the bar close to your legs."},
+         'tip': "Hinge at the hips, push hips back. Keep the bar close to your legs.", 'progression_kg': 5},
         {'name': 'Upper Chest Fly (cable/pec deck)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=10hg4LAa7UQ',
-         'tip': "Slight bend in elbows, squeeze at the top, control the negative."},
+         'tip': "Slight bend in elbows, squeeze at the top, control the negative.", 'progression_kg': 2.5},
         {'name': 'Cable Row', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=EU7bOadUsNI',
-         'tip': "Pull elbows back, squeeze shoulder blades together, keep torso still."},
+         'tip': "Pull elbows back, squeeze shoulder blades together, keep torso still.", 'progression_kg': 2.5},
         {'name': 'Bulgarian Split Squat', 'sets': 3, 'reps': '8 each leg', 'youtube': 'https://www.youtube.com/watch?v=2C-uNgKwPLE',
-         'tip': "Front foot far enough forward. Torso upright, control the descent."},
+         'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
         {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=odbyvJm7d8s',
-         'tip': "Keep elbows pinned at your sides, full extension at the bottom."},
+         'tip': "Keep elbows pinned at your sides, full extension at the bottom.", 'progression_kg': 2.5},
         {'name': 'Forearm Wrist Curl', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=SqwIBiru46w',
-         'tip': "Rest forearms on a bench, curl through a full range, control the movement."},
+         'tip': "Rest forearms on a bench, curl through a full range, control the movement.", 'progression_kg': 2.5},
     ],
     'workout_b_home': [
         {'name': 'Romanian Deadlift (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=aa57T45iFSE',
-         'tip': "Hinge at the hips, push hips back. Keep the dumbbells close to your legs."},
+         'tip': "Hinge at the hips, push hips back. Keep the dumbbells close to your legs.", 'progression_kg': 5},
         {'name': 'Dumbbell Shoulder Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/watch?v=guW_ENwLOMI',
-         'tip': "Press straight overhead. Avoid arching your lower back."},
+         'tip': "Press straight overhead. Avoid arching your lower back.", 'progression_kg': 2.5},
         {'name': 'Bent-over Dumbbell Row', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=dfkco3keMns',
-         'tip': "Flat back, pull elbow back and up, squeeze at the top."},
+         'tip': "Flat back, pull elbow back and up, squeeze at the top.", 'progression_kg': 2.5},
         {'name': 'Bulgarian Split Squat (dumbbell)', 'sets': 3, 'reps': '8 each leg', 'youtube': 'https://www.youtube.com/watch?v=2C-uNgKwPLE',
-         'tip': "Front foot far enough forward. Torso upright, control the descent."},
+         'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
         {'name': 'Tricep Kickback (dumbbell)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=IqgklYrtcUo',
-         'tip': "Keep your upper arm still, extend through the elbow only."},
+         'tip': "Keep your upper arm still, extend through the elbow only.", 'progression_kg': 2.5},
         {'name': 'Plank', 'sets': 2, 'reps': '30–45 sec', 'youtube': 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
-         'tip': "Squeeze glutes and abs together. Don't hold your breath."},
+         'tip': "Squeeze glutes and abs together. Don't hold your breath.", 'progression_kg': None},
     ],
 }
 
@@ -121,6 +127,11 @@ WORKOUT_TYPE_LABELS = {
 }
 REST_SECONDS_DEFAULT = 90
 
+# A training block (mesocycle) this long before the Coach tab suggests
+# rotating exercises / adjusting rep ranges / taking a deload week — within
+# the commonly-cited 4-8 week range for hypertrophy-focused programs.
+CYCLE_LENGTH_WEEKS = 6
+
 # Workout types plannable on the Home calendar — same set offered by the
 # Home screen's Gym/Home buttons and Yoga/Poci quick-start buttons.
 PLAN_META = {
@@ -137,6 +148,16 @@ PLAN_META = {
 # names/sets/reps/cues, shared with the /workout/live/<type> legacy flow.
 # No fixed weekly schedule: Workout A and B are always startable, and
 # gym vs. home is chosen when the user starts a session, not baked into a day.
+def _parse_rep_ceiling(reps_str):
+    """Top of a prescribed rep range as an int (e.g. '8–10' -> 10, '8 each
+    leg' -> 8), or None for time-held exercises ('30–45 sec') that aren't
+    progressed by hitting a rep count."""
+    if 'sec' in reps_str or 'min' in reps_str:
+        return None
+    nums = re.findall(r'\d+', reps_str)
+    return int(nums[-1]) if nums else None
+
+
 def _build_ab_workouts():
     out = {}
     for key, exercises in LIVE_WORKOUT_EXERCISES.items():
@@ -150,6 +171,8 @@ def _build_ab_workouts():
                     'target_reps': ex['reps'],
                     'cue': ex['tip'],
                     'youtube': ex['youtube'],
+                    'repCeiling': _parse_rep_ceiling(ex['reps']),
+                    'progressionKg': ex.get('progression_kg'),
                 }
                 for i, ex in enumerate(exercises)
             ],
@@ -233,6 +256,10 @@ def _create_tables(conn):
             date TEXT PRIMARY KEY,
             workout_key TEXT NOT NULL,
             created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
         );
     ''')
     conn.commit()
@@ -374,6 +401,78 @@ def _last_pr(db):
     if not row:
         return None
     return {'name': row['exercise_name'], 'value': _fmt_num(row['weight']) + 'kg × ' + str(row['reps'])}
+
+
+def _get_setting(db, key, default=None):
+    row = db.execute('SELECT value FROM app_settings WHERE key=?', (key,)).fetchone()
+    return row['value'] if row else default
+
+
+def _set_setting(db, key, value):
+    db.execute(
+        'INSERT INTO app_settings (key, value) VALUES (?,?) '
+        'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+        (key, value)
+    )
+    db.commit()
+
+
+def _get_cycle_start(db, today):
+    val = _get_setting(db, 'cycle_started_at')
+    if val:
+        return datetime.strptime(val, '%Y-%m-%d').date()
+    # First time this is asked for: anchor to the earliest logged session so
+    # an existing user doesn't get bumped back to "week 1" artificially; a
+    # brand new user with no history yet just starts today.
+    row = db.execute('SELECT MIN(date) as d FROM sessions').fetchone()
+    start = datetime.strptime(row['d'], '%Y-%m-%d').date() if row and row['d'] else today
+    _set_setting(db, 'cycle_started_at', str(start))
+    return start
+
+
+def _suggested_increment_kg(last_weight, base_increment):
+    """The double-progression jump, capped so it's never more than ~10% of
+    the current weight — the commonly-cited safe week-to-week load increase,
+    to avoid the coach ever suggesting too big a jump on lighter weights."""
+    if base_increment is None:
+        return None
+    if not last_weight or last_weight <= 0:
+        return base_increment
+    cap = last_weight * 0.10
+    step = min(base_increment, cap)
+    step = round(step * 2) / 2  # round to the nearest 0.5kg (typical plate/dumbbell jump)
+    return max(step, 0.5)
+
+
+def _progression_tip(db, exercise_id, rep_ceiling, base_increment_kg):
+    """Double progression: once every set of the most recent session hit the
+    top of the prescribed rep range, it's time to add weight next session."""
+    if rep_ceiling is None or base_increment_kg is None:
+        return None
+    rows = db.execute(
+        '''SELECT ss.session_id, ss.weight, ss.reps FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
+           WHERE ss.exercise_id = ? ORDER BY s.date DESC, s.id DESC, ss.set_index ASC''',
+        (exercise_id,)
+    ).fetchall()
+    if not rows:
+        return None
+    last_session_id = rows[0]['session_id']
+    last_sets = [r for r in rows if r['session_id'] == last_session_id]
+    last_weight = last_sets[0]['weight'] or 0
+    hit_ceiling = all(r['reps'] is not None and r['reps'] >= rep_ceiling for r in last_sets)
+    if hit_ceiling:
+        step = _suggested_increment_kg(last_weight, base_increment_kg)
+        return {
+            'status': 'increase', 'repCeiling': rep_ceiling,
+            'lastWeight': _fmt_num(last_weight), 'suggestedWeight': _fmt_num(round(last_weight + step, 1)),
+        }
+    return {'status': 'building', 'repCeiling': rep_ceiling, 'lastWeight': _fmt_num(last_weight)}
+
+
+def _coach_tip_text(tip):
+    if tip is None or tip['status'] != 'increase':
+        return None
+    return f"Coach: hit {tip['repCeiling']} reps on every set last time — try {tip['suggestedWeight']}kg today"
 
 
 def _format_legacy_exercise_line(name, sets, reps, weight_kg):
@@ -531,6 +630,32 @@ def _build_calendar_week(db, today, start):
     return days
 
 
+def _build_coach_data(db, today):
+    cycle_start = _get_cycle_start(db, today)
+    days_in = (today - cycle_start).days
+    cycle_week = min(CYCLE_LENGTH_WEEKS, days_in // 7 + 1)
+    cycle_complete = days_in >= CYCLE_LENGTH_WEEKS * 7
+
+    exercises = []
+    seen_names = set()
+    for key, exs in LIVE_WORKOUT_EXERCISES.items():
+        for i, ex in enumerate(exs):
+            if ex['name'] in seen_names:
+                continue  # gym/home variants of the same move (e.g. Pull-up) share a name — show once
+            ceiling = _parse_rep_ceiling(ex['reps'])
+            tip = _progression_tip(db, f'{key}_{i}', ceiling, ex.get('progression_kg'))
+            if tip is None:
+                continue  # never logged, or not a weight-progressed (time-held) exercise
+            seen_names.add(ex['name'])
+            exercises.append(dict(tip, name=ex['name']))
+
+    return {
+        'cycleStartDate': str(cycle_start), 'cycleWeek': cycle_week,
+        'cycleLengthWeeks': CYCLE_LENGTH_WEEKS, 'cycleComplete': cycle_complete,
+        'exercises': exercises,
+    }
+
+
 def _build_initial_data(db):
     today = date.today()
     today_idx = _weekday_sun0(today)
@@ -542,7 +667,8 @@ def _build_initial_data(db):
         exs = []
         for ex in w['exercises']:
             last = _last_set_for_exercise(db, ex['id'])
-            exs.append(dict(ex, lastWeight=last['weight'], lastReps=last['reps']))
+            tip = _progression_tip(db, ex['id'], ex['repCeiling'], ex['progressionKg'])
+            exs.append(dict(ex, lastWeight=last['weight'], lastReps=last['reps'], coachTip=_coach_tip_text(tip)))
         ab_workouts_out[key] = {'label': w['label'], 'exercises': exs}
 
     # Sessions logged from this Sun-Sat week through today — a simple
@@ -563,6 +689,7 @@ def _build_initial_data(db):
         'history': history,
         'progressChart': _progress_chart(db, today), 'progressChartLabel': PROGRESS_CHART_EXERCISE_LABEL,
         'calendarWeekStart': str(week_start), 'calendarWeek': _build_calendar_week(db, today, week_start),
+        'coach': _build_coach_data(db, today),
     }
 
 
@@ -608,6 +735,14 @@ def set_planned_workout():
         )
     db.commit()
     return jsonify({'success': True})
+
+
+@app.route('/api/coach/new-cycle', methods=['POST'])
+def start_new_cycle():
+    db = get_db()
+    today = date.today()
+    _set_setting(db, 'cycle_started_at', str(today))
+    return jsonify({'success': True, 'cycleStartDate': str(today), 'cycleWeek': 1, 'cycleComplete': False})
 
 
 @app.route('/log', methods=['GET', 'POST'])
