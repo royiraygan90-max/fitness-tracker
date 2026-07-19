@@ -484,11 +484,11 @@
       </div>
       <div class="tr-set-inputs">
         <div class="tr-set-field">
-          <input type="number" inputmode="decimal" value="${esc(s.weight)}" ${done ? 'disabled' : ''} oninput="App.changeSetField('${ex.id}',${i},'weight',this.value)"/>
+          <input type="number" inputmode="decimal" value="${esc(s.weight)}" ${done ? 'disabled' : ''} onfocus="this.select()" oninput="App.changeSetField('${ex.id}',${i},'weight',this.value)"/>
           <span class="tr-set-field-unit">KG</span>
         </div>
         <div class="tr-set-field">
-          <input type="number" inputmode="numeric" class="tr-reps-field" value="${esc(s.reps)}" ${done ? 'disabled' : ''} oninput="App.changeSetField('${ex.id}',${i},'reps',this.value)"/>
+          <input type="number" inputmode="numeric" class="tr-reps-field" value="${esc(s.reps)}" ${done ? 'disabled' : ''} onfocus="this.select()" oninput="App.changeSetField('${ex.id}',${i},'reps',this.value)"/>
           <span class="tr-set-field-unit">REPS</span>
         </div>
       </div>

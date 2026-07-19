@@ -379,6 +379,8 @@ function renderExercise() {
 
     repsInput.addEventListener('input', function() { setData.reps = repsInput.value; saveSession(); });
     weightInput.addEventListener('input', function() { setData.weight = weightInput.value; saveSession(); });
+    repsInput.addEventListener('focus', function() { repsInput.select(); });
+    weightInput.addEventListener('focus', function() { weightInput.select(); });
 
     row.appendChild(label);
     row.appendChild(repsInput);
