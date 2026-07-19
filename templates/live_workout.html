@@ -349,6 +349,7 @@ function renderExercise() {
     repsInput.placeholder = ex.reps;
     repsInput.value = setData.reps;
     repsInput.min = '0';
+    repsInput.inputMode = 'numeric';
     repsInput.setAttribute('aria-label', 'Reps for set ' + (setIdx + 1));
 
     const weightInput = document.createElement('input');
@@ -358,6 +359,7 @@ function renderExercise() {
     weightInput.value = setData.weight;
     weightInput.min = '0';
     weightInput.step = '0.5';
+    weightInput.inputMode = 'decimal';
     weightInput.setAttribute('aria-label', 'Weight for set ' + (setIdx + 1));
 
     const weightUnit = document.createElement('span');
