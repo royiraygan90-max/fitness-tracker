@@ -158,6 +158,7 @@ button { font-family: inherit; }
 .tr-cue-box { margin-top: 14px; border-radius: 12px; background: var(--surface2); padding: 13px 14px; }
 .tr-cue-label { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .tr-cue-text { font-size: 13.5px; color: rgba(245,243,239,.7); margin-top: 6px; line-height: 1.5; font-style: italic; }
+.tr-yt-link { display: inline-block; margin-top: 14px; font-size: 12px; font-weight: 600; color: var(--functional); }
 
 .tr-sets-head { display: flex; align-items: center; justify-content: space-between; }
 .tr-sets-label { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: rgba(245,243,239,.4); text-transform: uppercase; }
@@ -167,6 +168,7 @@ button { font-family: inherit; }
 .tr-note-input { flex: 1; height: 32px; border-radius: 8px; border: 1px solid rgba(255,255,255,.08); background: var(--surface2); color: var(--text); font-size: 12px; padding: 0 10px; font-family: 'IBM Plex Sans', sans-serif; }
 
 .tr-set-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.tr-copy-link { display: block; margin: -4px 0 4px 42px; padding: 0; border: none; background: none; color: var(--functional); font-size: 11px; font-weight: 600; cursor: pointer; }
 .tr-set-num-circle { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .tr-set-num-text { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; color: rgba(245,243,239,.5); }
 .tr-set-inputs { flex: 1; display: flex; gap: 10px; }
@@ -175,6 +177,11 @@ button { font-family: inherit; }
 .tr-set-field input.tr-reps-field { width: 50px; }
 .tr-set-field-unit { font-size: 8.5px; color: rgba(245,243,239,.35); letter-spacing: .04em; }
 .tr-set-check { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+/* ===== Warmup ===== */
+.tr-warmup-card { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 34px 22px; }
+.tr-warmup-count { font-family: 'Space Grotesk', sans-serif; font-size: 54px; font-weight: 700; color: var(--functional); margin-top: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tr-warmup-reps-label { font-size: 15px; font-weight: 600; color: rgba(245,243,239,.5); margin-left: 6px; }
 
 .tr-rest-card { margin-top: 14px; border-radius: 16px; background: rgba(47,130,255,.1); border: 1px solid rgba(47,130,255,.25); padding: 13px 15px; display: flex; align-items: center; gap: 13px; }
 .tr-rest-ring-wrap { position: relative; width: 48px; height: 48px; flex-shrink: 0; }

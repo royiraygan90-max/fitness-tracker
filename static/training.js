@@ -3,12 +3,23 @@
   const COLORS = { functional: '#2F82FF', yoga: '#6FBFA0', poci: '#F97316', gold: '#E8B84B' };
   const RING_CIRC = 163.36;
   const SAVE_KEY = 'training_live_session';
+  const WARMUP_ITEMS = [
+    { name: 'Arm Circles', desc: 'Forward + backward', type: 'timed', duration: 30 },
+    { name: 'Shoulder Rotations', desc: 'Scapular prep', type: 'timed', duration: 30 },
+    { name: 'Hip Circles', desc: 'Full hip mobility', type: 'timed', duration: 30 },
+    { name: 'Leg Swings', desc: 'Forward / back, both legs', type: 'timed', duration: 30 },
+    { name: 'Bodyweight Squat', desc: 'Slow and controlled', type: 'reps', reps: 10 },
+    { name: 'Dead Hang / Scapular Shrug', desc: 'Shoulder joint prep', type: 'timed', duration: 20 },
+    { name: 'Inchworm', desc: 'Hamstrings → plank → push-up → stand', type: 'reps', reps: 4 },
+  ];
 
   const state = {
     screen: 'home',
     activeTab: 'home',
     activeWorkoutKey: null,
     activeGenericCategory: null,
+    warmupIdx: 0,
+    warmupSecLeft: 0,
     exerciseIdx: 0,
     setLogs: {},
     exerciseNotesDraft: {},
@@ -53,9 +64,10 @@
 
   // ---------- persistence ----------
   function saveSession() {
-    if (state.screen !== 'live-functional' && state.screen !== 'live-generic') return;
+    if (!['warmup', 'live-functional', 'live-generic'].includes(state.screen)) return;
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       screen: state.screen, activeWorkoutKey: state.activeWorkoutKey, activeGenericCategory: state.activeGenericCategory,
+      warmupIdx: state.warmupIdx, warmupSecLeft: state.warmupSecLeft,
       exerciseIdx: state.exerciseIdx, setLogs: state.setLogs, exerciseNotesDraft: state.exerciseNotesDraft,
       restActive: state.restActive, restSecLeft: state.restSecLeft,
       genericRunning: state.genericRunning, genericElapsed: state.genericElapsed, genericNotes: state.genericNotes,
@@ -244,6 +256,39 @@
     </div>`;
   }
 
+  // ---------- Warmup ----------
+  function renderWarmup() {
+    const item = WARMUP_ITEMS[state.warmupIdx];
+    const isLast = state.warmupIdx === WARMUP_ITEMS.length - 1;
+    const progressPct = Math.round((state.warmupIdx / WARMUP_ITEMS.length) * 100);
+    els.root.innerHTML = `<div class="tr-live-header">
+        <div class="tr-live-topbar">
+          <button class="tr-icon-btn" onclick="App.closeLive()">${iconClose()}</button>
+          <div class="tr-live-title-block">
+            <div class="tr-live-title">Warmup</div>
+            <div class="tr-live-sub">${state.warmupIdx + 1} of ${WARMUP_ITEMS.length}</div>
+          </div>
+          <div style="width:34px"></div>
+        </div>
+        <div class="tr-progress-bar"><div class="tr-progress-fill" style="width:${progressPct}%;background:${COLORS.functional}"></div></div>
+      </div>
+      <div class="tr-live-body">
+        <div class="tr-card tr-warmup-card">
+          <div class="tr-ex-name">${esc(item.name)}</div>
+          <div class="tr-ex-target">${esc(item.desc)}</div>
+          ${item.type === 'timed'
+            ? `<div class="tr-warmup-count" id="warmup-count">${fmtTime(state.warmupSecLeft)}</div>`
+            : `<div class="tr-warmup-count">${item.reps}<span class="tr-warmup-reps-label">reps</span></div>`}
+        </div>
+      </div>
+      <div class="tr-live-footer">
+        <button class="tr-btn-nav tr-btn-prev" onclick="App.skipWarmup()">Skip Warmup</button>
+        ${item.type === 'reps'
+          ? `<button class="tr-btn-nav tr-btn-next" style="background:${COLORS.functional}" onclick="App.warmupNext()">${isLast ? 'Start Workout' : 'Next Exercise'}</button>`
+          : ''}
+      </div>`;
+  }
+
   // ---------- Live functional (Workout A/B, gym/home) ----------
   function renderLiveFunctional() {
     const workout = D.abWorkouts[state.activeWorkoutKey];
@@ -273,6 +318,7 @@
             <div class="tr-cue-label" style="color:${COLORS.functional}">Coach Cue</div>
             <div class="tr-cue-text">${esc(ex.cue)}</div>
           </div>
+          ${ex.youtube ? `<a class="tr-yt-link" href="${esc(ex.youtube)}" target="_blank" rel="noopener noreferrer">Watch tutorial ↗</a>` : ''}
         </div>
 
         <div class="tr-card">
@@ -284,7 +330,7 @@
             <span class="tr-note-label">Note</span>
             <input type="text" class="tr-note-input" value="${esc(state.exerciseNotesDraft[ex.id] || '')}" placeholder="e.g. felt easy — add weight next time" oninput="App.changeNote('${ex.id}', this.value)"/>
           </div>
-          <div>${sets.map((s, i) => setRow(ex, s, i)).join('')}</div>
+          <div>${sets.map((s, i) => setRow(ex, s, i, sets.length)).join('')}</div>
           ${state.restActive ? restCard(nextEx) : ''}
         </div>
 
@@ -303,30 +349,34 @@
       </div>`;
   }
 
-  function setRow(ex, s, i) {
+  function setRow(ex, s, i, totalSets) {
     const done = s.done;
     const numBg = done ? COLORS.functional : '#1E1D24';
     const checkBorder = done ? (s.isPR ? COLORS.gold : COLORS.functional) : 'rgba(255,255,255,.2)';
     const checkBg = done ? (s.isPR ? COLORS.gold : COLORS.functional) : 'transparent';
     const checkIconColor = done ? '#0B0A0D' : 'rgba(255,255,255,.25)';
+    const copyLink = (i === 0 && totalSets > 1 && !done)
+      ? `<button class="tr-copy-link" onclick="App.copyFirstSetToAll('${ex.id}')">Copy to all sets ↓</button>`
+      : '';
     return `<div class="tr-set-row" style="opacity:${done ? 0.5 : 1}">
       <div class="tr-set-num-circle" style="background:${numBg}">
         ${done ? iconCheck() : `<span class="tr-set-num-text">${i + 1}</span>`}
       </div>
       <div class="tr-set-inputs">
         <div class="tr-set-field">
-          <input type="number" value="${esc(s.weight)}" ${done ? 'disabled' : ''} oninput="App.changeSetField('${ex.id}',${i},'weight',this.value)"/>
+          <input type="number" inputmode="decimal" value="${esc(s.weight)}" ${done ? 'disabled' : ''} oninput="App.changeSetField('${ex.id}',${i},'weight',this.value)"/>
           <span class="tr-set-field-unit">KG</span>
         </div>
         <div class="tr-set-field">
-          <input type="number" class="tr-reps-field" value="${esc(s.reps)}" ${done ? 'disabled' : ''} oninput="App.changeSetField('${ex.id}',${i},'reps',this.value)"/>
+          <input type="number" inputmode="numeric" class="tr-reps-field" value="${esc(s.reps)}" ${done ? 'disabled' : ''} oninput="App.changeSetField('${ex.id}',${i},'reps',this.value)"/>
           <span class="tr-set-field-unit">REPS</span>
         </div>
       </div>
       <button class="tr-set-check" style="border-color:${checkBorder};background:${checkBg}" onclick="App.toggleSet('${ex.id}',${i})">
         <svg width="15" height="11" viewBox="0 0 16 12"><path d="M1 6L6 11L15 1" stroke="${checkIconColor}" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-    </div>`;
+    </div>
+    ${copyLink}`;
   }
 
   function restCard(nextEx) {
@@ -403,6 +453,7 @@
   function renderScreen() {
     if (state.screen === 'home') renderHome();
     else if (state.screen === 'history') renderHistory();
+    else if (state.screen === 'warmup') renderWarmup();
     else if (state.screen === 'live-functional') renderLiveFunctional();
     else if (state.screen === 'live-generic') renderLiveGeneric();
     else if (state.screen === 'complete') renderComplete();
@@ -433,7 +484,9 @@
       state.restActive = false;
       state.sessionStartMs = Date.now();
       state.sessionPRCount = 0;
-      state.screen = 'live-functional';
+      state.warmupIdx = 0;
+      state.warmupSecLeft = WARMUP_ITEMS[0].duration || 0;
+      state.screen = 'warmup';
       state.activeTab = null;
       saveSession();
       render();
@@ -457,10 +510,38 @@
       state.activeTab = 'home';
       render();
     },
+    warmupNext() {
+      if (state.warmupIdx < WARMUP_ITEMS.length - 1) {
+        state.warmupIdx++;
+        state.warmupSecLeft = WARMUP_ITEMS[state.warmupIdx].duration || 0;
+        saveSession();
+        renderScreen();
+      } else {
+        App.beginWorkoutAfterWarmup();
+      }
+    },
+    skipWarmup() { App.beginWorkoutAfterWarmup(); },
+    beginWorkoutAfterWarmup() {
+      state.screen = 'live-functional';
+      saveSession();
+      renderScreen();
+    },
     changeNote(exId, val) { state.exerciseNotesDraft[exId] = val; },
     changeSetField(exId, idx, field, val) {
       state.setLogs[exId][idx][field] = val === '' ? '' : Number(val);
       saveSession();
+    },
+    copyFirstSetToAll(exId) {
+      const sets = state.setLogs[exId];
+      const first = sets[0];
+      sets.forEach((s, i) => {
+        if (i > 0 && !s.done) {
+          s.weight = first.weight;
+          s.reps = first.reps;
+        }
+      });
+      saveSession();
+      renderScreen();
     },
     toggleSet(exId, idx) {
       const workout = D.abWorkouts[state.activeWorkoutKey];
@@ -587,6 +668,16 @@
   // ---------- ticking (rest timer / generic elapsed) ----------
   function startTicker() {
     tickTimer = setInterval(() => {
+      if (state.screen === 'warmup' && WARMUP_ITEMS[state.warmupIdx].type === 'timed') {
+        state.warmupSecLeft--;
+        if (state.warmupSecLeft <= 0) {
+          App.warmupNext();
+        } else {
+          const el = document.getElementById('warmup-count');
+          if (el) el.textContent = fmtTime(state.warmupSecLeft);
+          saveSession();
+        }
+      }
       if (state.screen === 'live-functional' && state.restActive) {
         state.restSecLeft--;
         if (state.restSecLeft <= 0) {
