@@ -226,6 +226,27 @@
     </div>`;
   }
 
+  function renderBodyWeightCard() {
+    const bw = D.bodyWeightLatest;
+    const chart = D.bodyWeightChart;
+    return `<div class="tr-chart-card">
+      <div class="tr-chart-head">
+        <div class="tr-chart-title">Body Weight</div>
+        <div class="tr-chart-sub">${bw ? 'Last: ' + esc(bw.weightKg) + 'kg · ' + esc(fmtMonthDay(bw.date)) : 'Not logged yet'}</div>
+      </div>
+      ${chart.length ? `<div class="tr-chart-bars">${chart.map(b => `
+        <div class="tr-chart-bar-col">
+          <span class="tr-chart-bar-val" style="color:${b.valueColor}">${esc(b.value)}</span>
+          <div class="tr-chart-bar" style="height:${b.heightPx}px;background:${b.barColor}"></div>
+          <span class="tr-chart-bar-label">${esc(b.label)}</span>
+        </div>`).join('')}</div>` : `<div class="tr-empty">Log your weight to start tracking.</div>`}
+      <div class="tr-bw-log-row">
+        <input type="number" inputmode="decimal" id="bw-input" placeholder="${bw ? esc(bw.weightKg) : 'kg'}" onfocus="this.select()"/>
+        <button class="tr-bw-log-btn" onclick="App.logBodyWeight()">Log Today</button>
+      </div>
+    </div>`;
+  }
+
   function renderHome() {
     const resume = loadSavedSession();
     const resumeBanner = resume ? `<div class="tr-resume-banner">
@@ -271,6 +292,8 @@
         </div>
         <div class="tr-chevron">${iconChevron()}</div>
       </div>` : ''}
+
+      ${renderBodyWeightCard()}
     </div></div>`;
   }
 
@@ -854,6 +877,21 @@
           renderScreen();
         })
         .catch(() => showToast('Could not start a new cycle — try again', 'neutral'));
+    },
+    logBodyWeight() {
+      const input = document.getElementById('bw-input');
+      const val = Number(input && input.value);
+      if (!val || val <= 0) return;
+      fetch('/api/bodyweight', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weightKg: val }),
+      }).then(r => r.json()).then(res => {
+        if (!res.success) { showToast('Could not log weight — try again', 'neutral'); return; }
+        D.bodyWeightChart = res.bodyWeightChart;
+        D.bodyWeightLatest = res.bodyWeightLatest;
+        showToast('Body weight logged', 'gold');
+        renderScreen();
+      }).catch(() => showToast('Could not log weight — try again', 'neutral'));
     },
   };
   window.App = App;
