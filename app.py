@@ -289,6 +289,11 @@ def _create_tables(conn):
             key TEXT PRIMARY KEY,
             value TEXT
         );
+        CREATE TABLE IF NOT EXISTS body_weight_logs (
+            date TEXT PRIMARY KEY,
+            weight_kg REAL NOT NULL,
+            created_at TEXT NOT NULL
+        );
     ''')
     conn.commit()
 
@@ -624,6 +629,32 @@ def _progress_chart(db, today):
     return out
 
 
+def _body_weight_chart(db, today):
+    rows = list(reversed(db.execute(
+        'SELECT date, weight_kg FROM body_weight_logs ORDER BY date DESC LIMIT 8'
+    ).fetchall()))
+    max_kg = max((r['weight_kg'] for r in rows), default=1) or 1
+    out = []
+    for i, r in enumerate(rows):
+        d = datetime.strptime(r['date'], '%Y-%m-%d').date()
+        is_last = i == len(rows) - 1
+        out.append({
+            'value': _fmt_num(r['weight_kg']) + 'kg',
+            'heightPx': max(10, round(96 * (r['weight_kg'] / max_kg))),
+            'barColor': GOLD_COLOR if is_last else 'rgba(47,130,255,.55)',
+            'valueColor': GOLD_COLOR if is_last else 'rgba(245,243,239,.55)',
+            'label': _fmt_rel_date(d, today),
+        })
+    return out
+
+
+def _latest_body_weight(db):
+    row = db.execute('SELECT date, weight_kg FROM body_weight_logs ORDER BY date DESC LIMIT 1').fetchone()
+    if not row:
+        return None
+    return {'date': row['date'], 'weightKg': _fmt_num(row['weight_kg'])}
+
+
 def _build_calendar_week(db, today, start):
     """7 days from `start` (a Sunday) — each day is either a completed
     session ('done'), a workout planned for a future/today date but not
@@ -718,6 +749,7 @@ def _build_initial_data(db):
         'progressChart': _progress_chart(db, today), 'progressChartLabel': PROGRESS_CHART_EXERCISE_LABEL,
         'calendarWeekStart': str(week_start), 'calendarWeek': _build_calendar_week(db, today, week_start),
         'coach': _build_coach_data(db, today),
+        'bodyWeightChart': _body_weight_chart(db, today), 'bodyWeightLatest': _latest_body_weight(db),
     }
 
 
@@ -771,6 +803,35 @@ def start_new_cycle():
     today = date.today()
     _set_setting(db, 'cycle_started_at', str(today))
     return jsonify({'success': True, 'cycleStartDate': str(today), 'cycleWeek': 1, 'cycleComplete': False})
+
+
+@app.route('/api/bodyweight', methods=['POST'])
+def log_body_weight():
+    data = request.get_json(silent=True) or {}
+    try:
+        d = datetime.strptime(data.get('date', str(date.today())), '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid date'}), 400
+    try:
+        weight_kg = float(data.get('weightKg'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid weight'}), 400
+    if weight_kg <= 0:
+        return jsonify({'error': 'Invalid weight'}), 400
+
+    db = get_db()
+    db.execute(
+        'INSERT INTO body_weight_logs (date, weight_kg, created_at) VALUES (?,?,?) '
+        'ON CONFLICT(date) DO UPDATE SET weight_kg=excluded.weight_kg, created_at=excluded.created_at',
+        (str(d), weight_kg, datetime.now().isoformat())
+    )
+    db.commit()
+    today = date.today()
+    return jsonify({
+        'success': True,
+        'bodyWeightChart': _body_weight_chart(db, today),
+        'bodyWeightLatest': _latest_body_weight(db),
+    })
 
 
 @app.route('/log', methods=['GET', 'POST'])
