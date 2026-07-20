@@ -319,8 +319,19 @@ def init_db():
 
 
 def _seed_sample_data(conn):
-    count = conn.execute('SELECT COUNT(*) FROM workouts').fetchone()[0]
-    if count > 0:
+    """Demo data for a brand-new install only — gated on a one-time
+    'seeded' flag rather than a live row count, so deleting the demo
+    entries (or all history) later doesn't make them reappear on the next
+    request."""
+    if conn.execute("SELECT 1 FROM app_settings WHERE key='seeded'").fetchone():
+        return
+    conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('seeded', '1')")
+    has_existing_data = (
+        conn.execute('SELECT 1 FROM workouts LIMIT 1').fetchone()
+        or conn.execute('SELECT 1 FROM sessions LIMIT 1').fetchone()
+    )
+    if has_existing_data:
+        conn.commit()
         return
     today = date.today()
     samples = [
