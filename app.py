@@ -22,20 +22,24 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'poci', 'flexibility'}
 
 WORKOUT_A_GYM_EXERCISES = [
-    'Squat', 'Bench Press', 'Pull-up',
-    'Lateral Raise', 'Cable Bicep Curl', 'Lower Back (Superman)'
+    'Squat', 'Bench Press', 'Pull-up', 'Lateral Raise', 'Cable Bicep Curl',
+    'Back Extension', 'Overhead Tricep Extension (cable)', 'Barbell Shrug',
+    'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_A_HOME_EXERCISES = [
-    'Goblet Squat (dumbbell)', 'Parallette Dips', 'Pull-up',
-    'Lateral Raise (dumbbell)', 'Dumbbell Bicep Curl', 'Lower Back (Superman)'
+    'Goblet Squat (dumbbell)', 'Parallette Dips', 'Chin-up', 'Lateral Raise (dumbbell)',
+    'Dumbbell Bicep Curl', 'Lower Back (Superman)', 'Overhead Tricep Extension (dumbbell)',
+    'Dumbbell Shrug', 'Calf Raise (dumbbell)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_GYM_EXERCISES = [
     'Romanian Deadlift', 'Upper Chest Fly (cable/pec deck)', 'Cable Row',
-    'Bulgarian Split Squat', 'Tricep Pushdown (cable)', 'Forearm Wrist Curl'
+    'Bulgarian Split Squat', 'Tricep Pushdown (cable)', "Farmer's Carry",
+    'EZ-Bar Curl', 'Barbell Shrug', 'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_HOME_EXERCISES = [
-    'Romanian Deadlift (dumbbell)', 'Dumbbell Shoulder Press', 'Bent-over Dumbbell Row',
-    'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Plank'
+    'Romanian Deadlift (dumbbell)', 'Incline Dumbbell Press', 'Bent-over Dumbbell Row',
+    'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Dumbbell Wrist Curl',
+    'Dumbbell Hammer Curl', 'Dumbbell Shrug', 'Calf Raise (dumbbell)', 'Core Finisher (your choice)'
 ]
 
 # progression_kg is the suggested weight jump for the Coach's double-progression
@@ -55,22 +59,38 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Slight bend in elbow. Raise to shoulder height only — no higher.", 'progression_kg': 2.5},
         {'name': 'Cable Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=5z4y7QRTx1w',
          'tip': "Keep elbows pinned to your sides. No swinging.", 'progression_kg': 2.5},
-        {'name': 'Lower Back (Superman)', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/watch?v=jTNpZIl1qU0',
-         'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck.", 'progression_kg': 2.5},
+        {'name': 'Back Extension', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/watch?v=81riMKjNBuA',
+         'tip': "Hips on the pad, rise until your body forms a straight line — don't hyperextend at the top.", 'progression_kg': 2.5},
+        {'name': 'Overhead Tricep Extension (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=8WC7rIOkhi0',
+         'tip': "Elbows pointing forward and still. Lower behind your head for a full stretch, then extend.", 'progression_kg': 2.5},
+        {'name': 'Barbell Shrug', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=KbsQ1E8Hg0o',
+         'tip': "Straight arms, shrug straight up toward your ears. Don't roll your shoulders.", 'progression_kg': 2.5},
+        {'name': 'Calf Raise (machine)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=97NbelB5yvQ',
+         'tip': "Full stretch at the bottom, pause and squeeze hard at the top.", 'progression_kg': 2.5},
+        {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
+         'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
     'workout_a_home': [
         {'name': 'Goblet Squat (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=gCESNsDsbqk',
          'tip': "Hold the dumbbell at chest height, sit back and down keeping your chest tall.", 'progression_kg': 5},
         {'name': 'Parallette Dips', 'sets': 3, 'reps': 'to failure / 10', 'youtube': 'https://www.youtube.com/watch?v=0EPpumD8eeI',
          'tip': "Lean slightly forward for chest emphasis. Control the descent, don't flare elbows too wide.", 'progression_kg': 2.5},
-        {'name': 'Pull-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
-         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up.", 'progression_kg': 2.5},
+        {'name': 'Chin-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/watch?v=e1YSApl-QcM',
+         'tip': "Underhand, shoulder-width grip. Pull your chest toward the bar, control the descent.", 'progression_kg': 2.5},
         {'name': 'Lateral Raise (dumbbell)', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=3VcKaXpzqRo',
          'tip': "Slight bend in elbow. Raise to shoulder height only — no higher.", 'progression_kg': 2.5},
         {'name': 'Dumbbell Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=XE_pHwbst04',
          'tip': "Keep elbows pinned to your sides. Control the negative.", 'progression_kg': 2.5},
         {'name': 'Lower Back (Superman)', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/watch?v=jTNpZIl1qU0',
          'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck.", 'progression_kg': 2.5},
+        {'name': 'Overhead Tricep Extension (dumbbell)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=DZgpCf5alfI',
+         'tip': "Hold one dumbbell with both hands, elbows in, lower behind your head under control.", 'progression_kg': 2.5},
+        {'name': 'Dumbbell Shrug', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=YJ2q8RkOFVw',
+         'tip': "Straight arms, shrug straight up toward your ears. Don't roll your shoulders.", 'progression_kg': 2.5},
+        {'name': 'Calf Raise (dumbbell)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=HvvqTpTongY',
+         'tip': "Balls of your feet on a step, full stretch at the bottom, squeeze at the top.", 'progression_kg': 2.5},
+        {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
+         'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
     'workout_b_gym': [
         {'name': 'Romanian Deadlift', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/watch?v=JCXUYuzwNrM',
@@ -83,22 +103,38 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
         {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=odbyvJm7d8s',
          'tip': "Keep elbows pinned at your sides, full extension at the bottom.", 'progression_kg': 2.5},
-        {'name': 'Forearm Wrist Curl', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=SqwIBiru46w',
-         'tip': "Rest forearms on a bench, curl through a full range, control the movement.", 'progression_kg': 2.5},
+        {'name': "Farmer's Carry", 'sets': 2, 'reps': '30–40 sec', 'youtube': 'https://www.youtube.com/watch?v=VBobkldqqvk',
+         'tip': "Stand tall, shoulders back, brace your core. Walk with short, controlled steps.", 'progression_kg': None},
+        {'name': 'EZ-Bar Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=5NsFLGUf0Fo',
+         'tip': "Elbows pinned to your sides, squeeze at the top, control the negative.", 'progression_kg': 2.5},
+        {'name': 'Barbell Shrug', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=KbsQ1E8Hg0o',
+         'tip': "Straight arms, shrug straight up toward your ears. Don't roll your shoulders.", 'progression_kg': 2.5},
+        {'name': 'Calf Raise (machine)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=97NbelB5yvQ',
+         'tip': "Full stretch at the bottom, pause and squeeze hard at the top.", 'progression_kg': 2.5},
+        {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
+         'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
     'workout_b_home': [
         {'name': 'Romanian Deadlift (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=aa57T45iFSE',
          'tip': "Hinge at the hips, push hips back. Keep the dumbbells close to your legs.", 'progression_kg': 5},
-        {'name': 'Dumbbell Shoulder Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/watch?v=guW_ENwLOMI',
-         'tip': "Press straight overhead. Avoid arching your lower back.", 'progression_kg': 2.5},
+        {'name': 'Incline Dumbbell Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/watch?v=sK4Rvug6ufo',
+         'tip': "Bench at ~30°. Press up and slightly inward, don't flare your elbows too wide.", 'progression_kg': 2.5},
         {'name': 'Bent-over Dumbbell Row', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=dfkco3keMns',
          'tip': "Flat back, pull elbow back and up, squeeze at the top.", 'progression_kg': 2.5},
         {'name': 'Bulgarian Split Squat (dumbbell)', 'sets': 3, 'reps': '8 each leg', 'youtube': 'https://www.youtube.com/watch?v=2C-uNgKwPLE',
          'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
         {'name': 'Tricep Kickback (dumbbell)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=IqgklYrtcUo',
          'tip': "Keep your upper arm still, extend through the elbow only.", 'progression_kg': 2.5},
-        {'name': 'Plank', 'sets': 2, 'reps': '30–45 sec', 'youtube': 'https://www.youtube.com/watch?v=ASdvN_XEl_c',
-         'tip': "Squeeze glutes and abs together. Don't hold your breath.", 'progression_kg': None},
+        {'name': 'Dumbbell Wrist Curl', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=JtZ_iT8rn70',
+         'tip': "Forearms on your thighs or a bench, palms up, curl through a full range.", 'progression_kg': 2.5},
+        {'name': 'Dumbbell Hammer Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=FNvndC4Ov04',
+         'tip': "Neutral grip (palms facing in) the whole way. No swinging.", 'progression_kg': 2.5},
+        {'name': 'Dumbbell Shrug', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=YJ2q8RkOFVw',
+         'tip': "Straight arms, shrug straight up toward your ears. Don't roll your shoulders.", 'progression_kg': 2.5},
+        {'name': 'Calf Raise (dumbbell)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=HvvqTpTongY',
+         'tip': "Balls of your feet on a step, full stretch at the bottom, squeeze at the top.", 'progression_kg': 2.5},
+        {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
+         'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
 }
 
