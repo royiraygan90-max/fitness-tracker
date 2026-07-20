@@ -961,6 +961,23 @@ def delete_workout(workout_id):
     return jsonify({'success': True})
 
 
+@app.route('/api/history/delete/<item_id>', methods=['POST'])
+def delete_history_item(item_id):
+    """item_id matches the prefixed ids _query_history hands to the client:
+    's<id>' for the new sessions table, 'w<id>' for legacy workouts rows."""
+    db = get_db()
+    if item_id.startswith('s') and item_id[1:].isdigit():
+        db.execute('DELETE FROM sessions WHERE id = ?', (int(item_id[1:]),))
+    elif item_id.startswith('w') and item_id[1:].isdigit():
+        workout_id = int(item_id[1:])
+        db.execute('DELETE FROM workout_exercises WHERE workout_id = ?', (workout_id,))
+        db.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
+    else:
+        return jsonify({'error': 'Invalid id'}), 400
+    db.commit()
+    return jsonify({'success': True})
+
+
 @app.route('/api/workouts/previous/<workout_type>')
 def previous_workout(workout_type):
     if workout_type not in LIVE_WORKOUT_EXERCISES:

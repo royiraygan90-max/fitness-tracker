@@ -350,6 +350,7 @@
       }
       if (h.notes) body += `<div class="tr-history-notes">${esc(h.notes)}</div>`;
       if (!body) body = '<div class="tr-empty" style="padding:10px 0">No details recorded.</div>';
+      body += `<button class="tr-history-delete-btn" onclick="App.deleteHistoryItem('${h.id}')">Delete Session</button>`;
       body = `<div class="tr-history-body">${body}</div>`;
     }
     return `<div class="tr-history-item">
@@ -800,6 +801,16 @@
       });
     },
     toggleHistoryExpand(id) { state.expandedHistoryId = state.expandedHistoryId === id ? null : id; renderScreen(); },
+    deleteHistoryItem(id) {
+      if (!confirm('Delete this session? This cannot be undone.')) return;
+      fetch('/api/history/delete/' + encodeURIComponent(id), { method: 'POST' })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) { window.location.href = '/'; }
+          else { showToast('Could not delete — try again', 'neutral'); }
+        })
+        .catch(() => showToast('Could not delete — try again', 'neutral'));
+    },
     setHistoryFilter(f) { state.historyFilter = f; renderScreen(); },
     backHome() {
       // A session was just saved server-side — reload so Home/History
