@@ -39,6 +39,7 @@
     calendarDays: D.calendarWeek,
     calendarLoading: false,
     planSheetDate: null,
+    pendingStart: null,
   };
 
   const els = {
@@ -141,6 +142,25 @@
         </div>
         ${day && day.status === 'planned' ? `<button class="tr-sheet-clear" onclick="App.clearPlan()">Clear plan</button>` : ''}
         <button class="tr-sheet-cancel" onclick="App.closePlanSheet()">Cancel</button>
+      </div>
+    </div>`;
+  }
+
+  // ---------- resume-conflict sheet (starting a workout while one's already saved) ----------
+  function renderResumeConflictSheet() {
+    if (!state.pendingStart || state.screen !== 'home') { els.sheetRoot.innerHTML = ''; return; }
+    const saved = loadSavedSession();
+    if (!saved) { state.pendingStart = null; els.sheetRoot.innerHTML = ''; return; }
+    const label = saved.screen === 'live-generic'
+      ? genericLabel(saved.activeGenericCategory)
+      : ((D.abWorkouts[saved.activeWorkoutKey] && D.abWorkouts[saved.activeWorkoutKey].label) || 'workout');
+    els.sheetRoot.innerHTML = `<div class="tr-sheet-backdrop" onclick="App.cancelPendingStart()">
+      <div class="tr-sheet" onclick="event.stopPropagation()">
+        <div class="tr-sheet-title">Unfinished session in progress</div>
+        <div class="tr-sheet-sub">You still have an unfinished ${esc(label)}. Continue where you left off, or start a new session and discard it?</div>
+        <button class="tr-btn-cta" style="margin-top:16px;background:${COLORS.functional}" onclick="App.resumeSaved()">Continue where I left off</button>
+        <button class="tr-sheet-clear" onclick="App.discardAndStartNew()">Start new (discard unfinished session)</button>
+        <button class="tr-sheet-cancel" onclick="App.cancelPendingStart()">Cancel</button>
       </div>
     </div>`;
   }
@@ -612,6 +632,40 @@
     renderTabBar();
     renderToast();
     renderPlanSheet();
+    renderResumeConflictSheet();
+  }
+
+  // ---------- start-workout (actually applying it, once no unsaved session is in the way) ----------
+  function doStartFunctional(key) {
+    const workout = D.abWorkouts[key];
+    state.activeWorkoutKey = key;
+    state.exerciseIdx = 0;
+    state.setLogs = {};
+    state.exerciseNotesDraft = {};
+    workout.exercises.forEach(ex => {
+      state.setLogs[ex.id] = Array.from({ length: ex.target_sets }, () => ({ weight: ex.lastWeight || 0, reps: ex.lastReps || 0, done: false }));
+      state.exerciseNotesDraft[ex.id] = D.exerciseNotes[ex.id] || '';
+    });
+    state.restActive = false;
+    state.sessionStartMs = Date.now();
+    state.sessionPRCount = 0;
+    state.warmupIdx = 0;
+    state.warmupSecLeft = WARMUP_ITEMS[0].duration || 0;
+    state.screen = 'warmup';
+    state.activeTab = null;
+    saveSession();
+    render();
+  }
+  function doStartGeneric(category) {
+    state.activeGenericCategory = category;
+    state.genericRunning = true;
+    state.genericElapsed = 0;
+    state.genericNotes = '';
+    state.sessionStartMs = Date.now();
+    state.screen = 'live-generic';
+    state.activeTab = null;
+    saveSession();
+    render();
   }
 
   // ---------- actions ----------
@@ -620,38 +674,25 @@
       state.activeTab = tab;
       state.screen = tab;
       state.planSheetDate = null;
+      state.pendingStart = null;
       render();
     },
     startFunctional(key) {
-      const workout = D.abWorkouts[key];
-      state.activeWorkoutKey = key;
-      state.exerciseIdx = 0;
-      state.setLogs = {};
-      state.exerciseNotesDraft = {};
-      workout.exercises.forEach(ex => {
-        state.setLogs[ex.id] = Array.from({ length: ex.target_sets }, () => ({ weight: ex.lastWeight || 0, reps: ex.lastReps || 0, done: false }));
-        state.exerciseNotesDraft[ex.id] = D.exerciseNotes[ex.id] || '';
-      });
-      state.restActive = false;
-      state.sessionStartMs = Date.now();
-      state.sessionPRCount = 0;
-      state.warmupIdx = 0;
-      state.warmupSecLeft = WARMUP_ITEMS[0].duration || 0;
-      state.screen = 'warmup';
-      state.activeTab = null;
-      saveSession();
-      render();
+      if (loadSavedSession()) { state.pendingStart = { type: 'functional', key }; render(); return; }
+      doStartFunctional(key);
     },
     startGeneric(category) {
-      state.activeGenericCategory = category;
-      state.genericRunning = true;
-      state.genericElapsed = 0;
-      state.genericNotes = '';
-      state.sessionStartMs = Date.now();
-      state.screen = 'live-generic';
-      state.activeTab = null;
-      saveSession();
-      render();
+      if (loadSavedSession()) { state.pendingStart = { type: 'generic', category }; render(); return; }
+      doStartGeneric(category);
+    },
+    cancelPendingStart() { state.pendingStart = null; render(); },
+    discardAndStartNew() {
+      const pending = state.pendingStart;
+      state.pendingStart = null;
+      clearSavedSession();
+      if (!pending) return;
+      if (pending.type === 'functional') doStartFunctional(pending.key);
+      else doStartGeneric(pending.category);
     },
     closeLive() {
       clearSavedSession();
@@ -819,6 +860,7 @@
     },
     resumeSaved() {
       const s = loadSavedSession();
+      state.pendingStart = null;
       if (!s) { renderScreen(); return; }
       Object.assign(state, s);
       render();
