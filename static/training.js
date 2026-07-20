@@ -1,6 +1,6 @@
 (() => {
   const D = window.__INITIAL__;
-  const COLORS = { functional: '#2F82FF', yoga: '#6FBFA0', poci: '#F97316', gold: '#E8B84B' };
+  const COLORS = { functional: '#2F82FF', yoga: '#6FBFA0', poci: '#F97316', gold: '#E8B84B', running: '#EC4899' };
   const RING_CIRC = 163.36;
   const SAVE_KEY = 'training_live_session';
   const WARMUP_ITEMS = [
@@ -28,6 +28,10 @@
     genericRunning: false,
     genericElapsed: 0,
     genericNotes: '',
+    runningWeek: null,
+    runningDay: null,
+    runningIdx: 0,
+    runningSecLeft: 0,
     toast: null,
     historyFilter: 'all',
     expandedHistoryId: null,
@@ -77,7 +81,7 @@
     return (RING_CIRC * (1 - state.restSecLeft / D.restSeconds)).toFixed(2);
   }
   function genericLabel(category) { return category === 'poci' ? 'Poci Session' : 'Yoga Session'; }
-  function genericColor(category) { return category === 'poci' ? COLORS.poci : COLORS.yoga; }
+  function genericColor(category) { return category === 'poci' ? COLORS.poci : (category === 'running' ? COLORS.running : COLORS.yoga); }
   function shiftDateStr(dateStr, days) {
     const d = new Date(dateStr + 'T00:00:00');
     d.setDate(d.getDate() + days);
@@ -89,13 +93,15 @@
 
   // ---------- persistence ----------
   function saveSession() {
-    if (!['warmup', 'live-functional', 'live-generic'].includes(state.screen)) return;
+    if (!['warmup', 'live-functional', 'live-generic', 'live-running'].includes(state.screen)) return;
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       screen: state.screen, activeWorkoutKey: state.activeWorkoutKey, activeGenericCategory: state.activeGenericCategory,
       warmupIdx: state.warmupIdx, warmupSecLeft: state.warmupSecLeft,
       exerciseIdx: state.exerciseIdx, setLogs: state.setLogs, exerciseNotesDraft: state.exerciseNotesDraft,
       restActive: state.restActive, restSecLeft: state.restSecLeft,
       genericRunning: state.genericRunning, genericElapsed: state.genericElapsed, genericNotes: state.genericNotes,
+      runningWeek: state.runningWeek, runningDay: state.runningDay,
+      runningIdx: state.runningIdx, runningSecLeft: state.runningSecLeft,
       sessionStartMs: state.sessionStartMs, sessionPRCount: state.sessionPRCount,
       savedAt: Date.now(),
     }));
@@ -153,6 +159,8 @@
     if (!saved) { state.pendingStart = null; els.sheetRoot.innerHTML = ''; return; }
     const label = saved.screen === 'live-generic'
       ? genericLabel(saved.activeGenericCategory)
+      : saved.screen === 'live-running'
+      ? `Week ${saved.runningWeek} · Day ${saved.runningDay} run`
       : ((D.abWorkouts[saved.activeWorkoutKey] && D.abWorkouts[saved.activeWorkoutKey].label) || 'workout');
     els.sheetRoot.innerHTML = `<div class="tr-sheet-backdrop" onclick="App.cancelPendingStart()">
       <div class="tr-sheet" onclick="event.stopPropagation()">
@@ -193,7 +201,7 @@
       if (s.prCount) line += ' · ' + s.prCount + ' PR' + (s.prCount > 1 ? 's' : '');
       return line;
     }
-    if (s.category === 'yoga' || s.category === 'poci') {
+    if (s.category === 'yoga' || s.category === 'poci' || s.category === 'running') {
       const parts = [];
       if (s.durationMin) parts.push(s.durationMin + ' min');
       if (s.notes) parts.push(s.notes.slice(0, 40));
@@ -282,6 +290,24 @@
     </div>`;
   }
 
+  function renderRunningCard() {
+    const s = D.runningNextSession;
+    const runSec = s.intervals.filter(i => i.type === 'run').reduce((a, i) => a + i.duration_sec, 0);
+    const totalMin = Math.round(s.totalDurationSec / 60);
+    const runMin = Math.round(runSec / 60);
+    return `<div class="tr-chart-card">
+      <div class="tr-chart-head">
+        <div class="tr-chart-title">Running</div>
+        <div class="tr-chart-sub">${s.graduated ? 'Program complete' : `Week ${s.week} of ${s.totalWeeks}`}</div>
+      </div>
+      <div class="tr-yoga-routine-title">${s.graduated ? 'Maintenance run' : `Day ${s.day} of 3`}</div>
+      <div class="tr-chart-sub" style="margin-top:4px">${totalMin} min total, ${runMin} min running</div>
+      <div class="tr-yoga-actions">
+        <button class="tr-yoga-done-btn" style="flex:none;width:100%;background:${COLORS.running}" onclick="App.startRunning()">Start Run</button>
+      </div>
+    </div>`;
+  }
+
   function renderHome() {
     const resume = loadSavedSession();
     const resumeBanner = resume ? `<div class="tr-resume-banner">
@@ -311,6 +337,7 @@
       </div>
 
       ${renderYogaCard()}
+      ${renderRunningCard()}
 
       <div class="tr-stat-row">
         <div class="tr-stat-card"><div class="tr-stat-value">${D.weekCount}</div><div class="tr-stat-label">sessions this week</div></div>
@@ -354,9 +381,10 @@
       ${D.progressCharts.map(progressChartCard).join('')}
 
       <div class="tr-filter-row">
-        ${['all', 'functional', 'yoga', 'poci'].map(key => {
+        ${['all', 'functional', 'running', 'yoga', 'poci'].map(key => {
           const active = state.historyFilter === key;
-          const label = key === 'all' ? 'All' : (key === 'functional' ? 'Workout' : (key === 'yoga' ? 'Yoga' : 'Poci'));
+          const labels = { functional: 'Workout', running: 'Running', yoga: 'Yoga', poci: 'Poci' };
+          const label = key === 'all' ? 'All' : labels[key];
           return `<button class="tr-filter-btn" style="border:1px solid ${active ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.08)'};background:${active ? 'rgba(255,255,255,.1)' : 'transparent'};color:${active ? '#F5F3EF' : 'rgba(245,243,239,.45)'}" onclick="App.setHistoryFilter('${key}')">${label}</button>`;
         }).join('')}
       </div>
@@ -470,6 +498,35 @@
         ${item.type === 'reps'
           ? `<button class="tr-btn-nav tr-btn-next" style="background:${COLORS.functional}" onclick="App.warmupNext()">${isLast ? 'Start Workout' : 'Next Exercise'}</button>`
           : ''}
+      </div>`;
+  }
+
+  // ---------- Live Running (Couch to 5K walk/run intervals) ----------
+  function renderLiveRunning() {
+    const session = D.runningNextSession;
+    const interval = session.intervals[state.runningIdx];
+    const isLast = state.runningIdx === session.intervals.length - 1;
+    const progressPct = Math.round((state.runningIdx / session.intervals.length) * 100);
+    const isWalk = interval.type === 'walk';
+    els.root.innerHTML = `<div class="tr-live-header">
+        <div class="tr-live-topbar">
+          <button class="tr-icon-btn" onclick="App.closeLive()">${iconClose()}</button>
+          <div class="tr-live-title-block">
+            <div class="tr-live-title">Week ${session.week} · Day ${session.day}</div>
+            <div class="tr-live-sub">Interval ${state.runningIdx + 1} of ${session.intervals.length}</div>
+          </div>
+          <div style="width:34px"></div>
+        </div>
+        <div class="tr-progress-bar"><div class="tr-progress-fill" style="width:${progressPct}%;background:${COLORS.running}"></div></div>
+      </div>
+      <div class="tr-live-body">
+        <div class="tr-card tr-warmup-card">
+          <div class="tr-ex-name" style="color:${isWalk ? 'rgba(245,243,239,.75)' : COLORS.running}">${isWalk ? 'Walk' : 'Run'}</div>
+          <div class="tr-warmup-count" id="running-count">${fmtTime(state.runningSecLeft)}</div>
+        </div>
+      </div>
+      <div class="tr-live-footer">
+        <button class="tr-btn-nav tr-btn-prev" onclick="App.runningAdvance()">${isLast ? 'Finish Now' : 'Skip Interval'}</button>
       </div>`;
   }
 
@@ -642,6 +699,7 @@
     else if (state.screen === 'warmup') renderWarmup();
     else if (state.screen === 'live-functional') renderLiveFunctional();
     else if (state.screen === 'live-generic') renderLiveGeneric();
+    else if (state.screen === 'live-running') renderLiveRunning();
     else if (state.screen === 'complete') renderComplete();
   }
   function render() {
@@ -684,6 +742,18 @@
     saveSession();
     render();
   }
+  function doStartRunning() {
+    const session = D.runningNextSession;
+    state.runningWeek = session.week;
+    state.runningDay = session.day;
+    state.runningIdx = 0;
+    state.runningSecLeft = session.intervals[0].duration_sec;
+    state.sessionStartMs = Date.now();
+    state.screen = 'live-running';
+    state.activeTab = null;
+    saveSession();
+    render();
+  }
 
   // ---------- actions ----------
   const App = {
@@ -701,6 +771,10 @@
     startGeneric(category) {
       if (loadSavedSession()) { state.pendingStart = { type: 'generic', category }; render(); return; }
       doStartGeneric(category);
+    },
+    startRunning() {
+      if (loadSavedSession()) { state.pendingStart = { type: 'running' }; render(); return; }
+      doStartRunning();
     },
     quickLogPoci() {
       fetch('/api/sessions/generic', {
@@ -741,6 +815,7 @@
       clearSavedSession();
       if (!pending) return;
       if (pending.type === 'functional') doStartFunctional(pending.key);
+      else if (pending.type === 'running') doStartRunning();
       else doStartGeneric(pending.category);
     },
     closeLive() {
@@ -762,6 +837,39 @@
       }
     },
     skipWarmup() { App.beginWorkoutAfterWarmup(); },
+    runningAdvance() {
+      const session = D.runningNextSession;
+      if (state.runningIdx < session.intervals.length - 1) {
+        state.runningIdx++;
+        state.runningSecLeft = session.intervals[state.runningIdx].duration_sec;
+        saveSession();
+        renderScreen();
+      } else {
+        App.finishRunning();
+      }
+    },
+    finishRunning() {
+      if (state.saving) return;
+      state.saving = true;
+      renderScreen();
+      const session = D.runningNextSession;
+      fetch('/api/sessions/running', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ week: session.week, day: session.day, date: D.today }),
+      }).then(r => r.json()).then(res => {
+        state.saving = false;
+        if (!res.success) { showToast('Could not save — check your connection and try again', 'neutral'); renderScreen(); return; }
+        D.runningNextSession = res.runningNextSession;
+        state.completionStats = { type: 'running', category: 'running', title: `Week ${session.week} · Day ${session.day}`, durationSec: session.totalDurationSec };
+        state.screen = 'complete';
+        clearSavedSession();
+        render();
+      }).catch(() => {
+        state.saving = false;
+        showToast('Could not save — check your connection and try again', 'neutral');
+        renderScreen();
+      });
+    },
     beginWorkoutAfterWarmup() {
       state.screen = 'live-functional';
       saveSession();
@@ -1034,6 +1142,16 @@
         const el = document.getElementById('generic-elapsed');
         if (el) el.textContent = fmtTime(state.genericElapsed);
         saveSession();
+      }
+      if (state.screen === 'live-running') {
+        state.runningSecLeft--;
+        if (state.runningSecLeft <= 0) {
+          App.runningAdvance();
+        } else {
+          const el = document.getElementById('running-count');
+          if (el) el.textContent = fmtTime(state.runningSecLeft);
+          saveSession();
+        }
       }
     }, 1000);
   }

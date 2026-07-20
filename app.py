@@ -140,6 +140,7 @@ YOGA_COLOR = '#6FBFA0'
 GOLD_COLOR = '#E8B84B'
 POCI_COLOR = '#F97316'
 FLEXIBILITY_COLOR = '#A855F7'
+RUNNING_COLOR = '#EC4899'
 # Gym variants are shades of blue, home variants are shades of green —
 # matches the gym/home split introduced for Workout A/B (legacy 2-type
 # workout_a/workout_b entries keep using FUNCTIONAL_COLOR, see legacy_meta).
@@ -568,6 +569,13 @@ def _query_history(db, today, limit=None):
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
                 'exercises': [], 'notes': r['notes'] or '', 'focusTags': [],
             })
+        elif r['session_type'] == 'running':
+            items.append({
+                'id': 's' + str(r['id']), 'category': 'running', 'legacy': False, 'accent': RUNNING_COLOR,
+                'title': r['notes'] or 'Run', 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
+                'exercises': [], 'notes': '', 'focusTags': [],
+            })
         else:
             items.append({
                 'id': 's' + str(r['id']), 'category': 'yoga', 'legacy': False, 'accent': YOGA_COLOR,
@@ -800,6 +808,7 @@ def _build_initial_data(db):
         'coach': _build_coach_data(db, today),
         'bodyWeightChart': _body_weight_chart(db, today), 'bodyWeightLatest': _latest_body_weight(db),
         'yogaNextRoutine': _next_yoga_routine(db), 'yogaWristRoutine': YOGA_ROUTINES_BY_KEY['wrist'],
+        'runningNextSession': _next_running_session(db),
     }
 
 
@@ -1155,6 +1164,80 @@ YOGA_ROUTINES = [
 YOGA_ROUTINES_BY_KEY = {r['key']: r for r in YOGA_ROUTINES}
 
 
+def _walk(sec):
+    return {'type': 'walk', 'duration_sec': sec}
+
+
+def _run(sec):
+    return {'type': 'run', 'duration_sec': sec}
+
+
+def _run_walk(reps, run_sec, walk_sec, trailing_walk=True):
+    """`reps` run/walk pairs back to back; drop the final walk when the
+    interval right after this block is itself a run (e.g. week 5 day 1's
+    5-3-5-3-5 pattern, which is 3 runs with only 2 walks between them)."""
+    out = []
+    for i in range(reps):
+        out.append(_run(run_sec))
+        if trailing_walk or i < reps - 1:
+            out.append(_walk(walk_sec))
+    return out
+
+
+WARMUP_WALK = _walk(300)  # every session opens with the same 5-minute brisk walk
+
+
+def _same_all_week(week_num, intervals):
+    return [{'week': week_num, 'day': d, 'intervals': intervals} for d in (1, 2, 3)]
+
+
+# The NHS Couch to 5K program — the most widely-used, validated beginner
+# walk/run progression, 3 sessions/week over 9 weeks. Weeks 1, 2, 4, 7, 8, 9
+# repeat the same session all 3 days; weeks 3, 5 and 6 vary session-to-session
+# within the week as continuous running is introduced.
+RUNNING_PROGRAM = (
+    _same_all_week(1, [WARMUP_WALK] + _run_walk(8, 60, 90))
+    + _same_all_week(2, [WARMUP_WALK] + _run_walk(6, 90, 120))
+    + _same_all_week(3, [WARMUP_WALK] + (_run_walk(1, 90, 90) + _run_walk(1, 180, 180)) * 2)
+    + _same_all_week(4, [WARMUP_WALK, _run(180), _walk(90), _run(300), _walk(150), _run(180), _walk(90), _run(300)])
+    + [
+        {'week': 5, 'day': 1, 'intervals': [WARMUP_WALK] + _run_walk(3, 300, 180, trailing_walk=False)},
+        {'week': 5, 'day': 2, 'intervals': [WARMUP_WALK] + _run_walk(2, 480, 300, trailing_walk=False)},
+        {'week': 5, 'day': 3, 'intervals': [WARMUP_WALK, _run(1200)]},
+    ]
+    + [
+        {'week': 6, 'day': 1, 'intervals': [WARMUP_WALK, _run(300), _walk(180), _run(480), _walk(180), _run(300)]},
+        {'week': 6, 'day': 2, 'intervals': [WARMUP_WALK] + _run_walk(2, 600, 180, trailing_walk=False)},
+        {'week': 6, 'day': 3, 'intervals': [WARMUP_WALK, _run(1500)]},
+    ]
+    + _same_all_week(7, [WARMUP_WALK, _run(1500)])
+    + _same_all_week(8, [WARMUP_WALK, _run(1680)])
+    + _same_all_week(9, [WARMUP_WALK, _run(1800)])
+)
+RUNNING_PROGRAM_BY_WD = {(s['week'], s['day']): s for s in RUNNING_PROGRAM}
+RUNNING_TOTAL_WEEKS = 9
+
+
+def _running_progress(db):
+    week = int(_get_setting(db, 'running_week', 1))
+    day = int(_get_setting(db, 'running_day', 1))
+    if (week, day) not in RUNNING_PROGRAM_BY_WD:
+        week, day = 1, 1
+    return week, day
+
+
+def _next_running_session(db):
+    week, day = _running_progress(db)
+    session = RUNNING_PROGRAM_BY_WD[(week, day)]
+    graduated = week == RUNNING_TOTAL_WEEKS and day == 3
+    return {
+        'week': week, 'day': day, 'totalWeeks': RUNNING_TOTAL_WEEKS,
+        'intervals': session['intervals'],
+        'totalDurationSec': sum(i['duration_sec'] for i in session['intervals']),
+        'graduated': graduated,
+    }
+
+
 def _yoga_rotation_idx(db):
     val = _get_setting(db, 'yoga_rotation_idx')
     try:
@@ -1186,6 +1269,35 @@ def save_yoga_session():
         _set_setting(db, 'yoga_rotation_idx', str((idx + 1) % len(YOGA_ROUTINES)))
     db.commit()
     return jsonify({'success': True, 'yogaNextRoutine': _next_yoga_routine(db)})
+
+
+@app.route('/api/sessions/running', methods=['POST'])
+def save_running_session():
+    data = request.get_json(silent=True) or {}
+    try:
+        week, day = int(data.get('week')), int(data.get('day'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid week/day'}), 400
+    session = RUNNING_PROGRAM_BY_WD.get((week, day))
+    if not session:
+        return jsonify({'error': 'Invalid week/day'}), 400
+    session_date = data.get('date', str(date.today()))
+    duration_sec = sum(i['duration_sec'] for i in session['intervals'])
+
+    db = get_db()
+    db.execute(
+        'INSERT INTO sessions (date, session_type, duration_sec, notes, created_at) VALUES (?,?,?,?,?)',
+        (session_date, 'running', duration_sec, f'Week {week} · Day {day}', datetime.now().isoformat())
+    )
+    db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
+    cur_week, cur_day = _running_progress(db)
+    is_graduation = week == RUNNING_TOTAL_WEEKS and day == 3
+    if (cur_week, cur_day) == (week, day) and not is_graduation:
+        next_day, next_week = (day + 1, week) if day < 3 else (1, week + 1)
+        _set_setting(db, 'running_week', str(next_week))
+        _set_setting(db, 'running_day', str(next_day))
+    db.commit()
+    return jsonify({'success': True, 'runningNextSession': _next_running_session(db)})
 
 
 @app.route('/api/sessions/generic', methods=['POST'])
