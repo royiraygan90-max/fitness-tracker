@@ -267,6 +267,21 @@
     </div>`;
   }
 
+  function renderYogaCard() {
+    const routine = D.yogaNextRoutine;
+    return `<div class="tr-chart-card">
+      <div class="tr-chart-head">
+        <div class="tr-chart-title">Yoga &amp; Mobility</div>
+        <div class="tr-chart-sub">${esc(routine.focus)}</div>
+      </div>
+      <div class="tr-yoga-routine-title">${esc(routine.title)}</div>
+      <div class="tr-yoga-actions">
+        <a class="tr-yoga-watch-btn" href="${esc(routine.youtube)}" target="_blank" rel="noopener noreferrer">Watch Video ↗</a>
+        <button class="tr-yoga-done-btn" onclick="App.markYogaDone('${routine.key}')">Mark Done</button>
+      </div>
+    </div>`;
+  }
+
   function renderHome() {
     const resume = loadSavedSession();
     const resumeBanner = resume ? `<div class="tr-resume-banner">
@@ -291,9 +306,11 @@
       </div>
 
       <div class="tr-quick-row">
-        <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.startGeneric('yoga')">Start Yoga</button>
+        <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.quickLogWrist()">Wrist Care</button>
         <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.quickLogPoci()">Log Poci</button>
       </div>
+
+      ${renderYogaCard()}
 
       <div class="tr-stat-row">
         <div class="tr-stat-card"><div class="tr-stat-value">${D.weekCount}</div><div class="tr-stat-label">sessions this week</div></div>
@@ -693,6 +710,29 @@
         if (res.success) { window.location.href = '/'; }
         else { showToast('Could not log Poci — try again', 'neutral'); }
       }).catch(() => showToast('Could not log Poci — try again', 'neutral'));
+    },
+    markYogaDone(routineKey) {
+      fetch('/api/sessions/yoga', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ routineKey, date: D.today }),
+      }).then(r => r.json()).then(res => {
+        if (!res.success) { showToast('Could not log session — try again', 'neutral'); return; }
+        D.yogaNextRoutine = res.yogaNextRoutine;
+        showToast('Yoga logged — nice work', 'gold');
+        renderScreen();
+      }).catch(() => showToast('Could not log session — try again', 'neutral'));
+    },
+    quickLogWrist() {
+      window.open(D.yogaWristRoutine.youtube, '_blank');
+      fetch('/api/sessions/yoga', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ routineKey: 'wrist', date: D.today }),
+      }).then(r => r.json()).then(res => {
+        if (!res.success) { showToast('Could not log session — try again', 'neutral'); return; }
+        D.yogaNextRoutine = res.yogaNextRoutine;
+        showToast('Wrist care logged', 'gold');
+        renderScreen();
+      }).catch(() => showToast('Could not log session — try again', 'neutral'));
     },
     cancelPendingStart() { state.pendingStart = null; render(); },
     discardAndStartNew() {
