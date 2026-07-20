@@ -602,17 +602,11 @@ def _query_history(db, today, limit=None):
     return items[:limit] if limit else items
 
 
-# Squat (gym) is exercises[0] of workout_a_gym in LIVE_WORKOUT_EXERCISES —
-# see _build_ab_workouts for the id scheme.
-PROGRESS_CHART_EXERCISE_ID = 'workout_a_gym_0'
-PROGRESS_CHART_EXERCISE_LABEL = 'Squat'
-
-
-def _progress_chart(db, today):
+def _progress_chart_bars(db, today, exercise_id):
     rows = list(reversed(db.execute(
         '''SELECT s.date, ss.weight FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
            WHERE ss.exercise_id = ? AND ss.set_index = 0 ORDER BY s.date DESC LIMIT 5''',
-        (PROGRESS_CHART_EXERCISE_ID,)
+        (exercise_id,)
     ).fetchall()))
     max_kg = max((r['weight'] for r in rows), default=1) or 1
     out = []
@@ -627,6 +621,26 @@ def _progress_chart(db, today):
             'label': _fmt_rel_date(d, today),
         })
     return out
+
+
+def _all_progress_charts(db, today):
+    """One chart per exercise that's been logged at least twice with real
+    weight recorded — skips bodyweight/time-held exercises (Core Finisher,
+    Farmer's Carry, unweighted Pull-up/Chin-up) since a weight chart for
+    those would just be a flat 0kg line. Ordered by most recently logged."""
+    rows = db.execute(
+        '''SELECT ss.exercise_id, ss.exercise_name, COUNT(DISTINCT ss.session_id) as session_count,
+                  MAX(s.date) as last_date, MAX(ss.weight) as max_weight
+           FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
+           WHERE ss.set_index = 0
+           GROUP BY ss.exercise_id
+           HAVING session_count >= 2 AND max_weight > 0
+           ORDER BY last_date DESC'''
+    ).fetchall()
+    return [
+        {'exerciseId': r['exercise_id'], 'label': r['exercise_name'], 'bars': _progress_chart_bars(db, today, r['exercise_id'])}
+        for r in rows
+    ]
 
 
 def _body_weight_chart(db, today):
@@ -746,7 +760,7 @@ def _build_initial_data(db):
         'abWorkouts': ab_workouts_out,
         'exerciseNotes': {r['exercise_id']: r['note'] for r in db.execute('SELECT exercise_id, note FROM exercise_notes').fetchall()},
         'history': history,
-        'progressChart': _progress_chart(db, today), 'progressChartLabel': PROGRESS_CHART_EXERCISE_LABEL,
+        'progressCharts': _all_progress_charts(db, today),
         'calendarWeekStart': str(week_start), 'calendarWeek': _build_calendar_week(db, today, week_start),
         'coach': _build_coach_data(db, today),
         'bodyWeightChart': _body_weight_chart(db, today), 'bodyWeightLatest': _latest_body_weight(db),
