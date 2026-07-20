@@ -571,7 +571,8 @@ def _query_history(db, today, limit=None):
         else:
             items.append({
                 'id': 's' + str(r['id']), 'category': 'yoga', 'legacy': False, 'accent': YOGA_COLOR,
-                'title': 'Yoga Session', 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'title': r['notes'] if r['notes'] in {rt['title'] for rt in YOGA_ROUTINES} else 'Yoga Session',
+                'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
                 'exercises': [], 'notes': r['notes'] or '', 'focusTags': [],
             })
@@ -798,6 +799,7 @@ def _build_initial_data(db):
         'calendarWeekStart': str(week_start), 'calendarWeek': _build_calendar_week(db, today, week_start),
         'coach': _build_coach_data(db, today),
         'bodyWeightChart': _body_weight_chart(db, today), 'bodyWeightLatest': _latest_body_weight(db),
+        'yogaNextRoutine': _next_yoga_routine(db), 'yogaWristRoutine': YOGA_ROUTINES_BY_KEY['wrist'],
     }
 
 
@@ -1136,6 +1138,54 @@ def save_functional_session():
 
 
 GENERIC_SESSION_CATEGORIES = {'yoga', 'poci'}
+
+# Real follow-along mobility videos, not a self-assembled pose list — a
+# genuine instructor gives pacing/breathing/safety cues a static list can't.
+# Rotates automatically each time one is logged; the wrist routine is also
+# reachable on its own since carpal tunnel relief benefits from a much
+# higher frequency (research suggests up to daily) than the others.
+YOGA_ROUTINES = [
+    {'key': 'legs', 'title': 'Leg & Squat Mobility', 'focus': 'Hip and ankle mobility for deeper, safer squats',
+     'youtube': 'https://www.youtube.com/watch?v=tuTjC6u03Lg', 'duration_sec': 900},
+    {'key': 'back_posture', 'title': 'Lower Back & Posture', 'focus': 'Spinal mobility and rounded-shoulder relief',
+     'youtube': 'https://www.youtube.com/watch?v=6YgehNFlYH0', 'duration_sec': 900},
+    {'key': 'wrist', 'title': 'Wrist & Carpal Tunnel Care', 'focus': 'Nerve glides and forearm stretches',
+     'youtube': 'https://www.youtube.com/watch?v=TPXaQFC6xT4', 'duration_sec': 600},
+]
+YOGA_ROUTINES_BY_KEY = {r['key']: r for r in YOGA_ROUTINES}
+
+
+def _yoga_rotation_idx(db):
+    val = _get_setting(db, 'yoga_rotation_idx')
+    try:
+        return int(val) % len(YOGA_ROUTINES)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _next_yoga_routine(db):
+    return YOGA_ROUTINES[_yoga_rotation_idx(db)]
+
+
+@app.route('/api/sessions/yoga', methods=['POST'])
+def save_yoga_session():
+    data = request.get_json(silent=True) or {}
+    routine = YOGA_ROUTINES_BY_KEY.get(data.get('routineKey'))
+    if not routine:
+        return jsonify({'error': 'Invalid routine'}), 400
+    session_date = data.get('date', str(date.today()))
+
+    db = get_db()
+    db.execute(
+        'INSERT INTO sessions (date, session_type, duration_sec, notes, created_at) VALUES (?,?,?,?,?)',
+        (session_date, 'yoga', routine['duration_sec'], routine['title'], datetime.now().isoformat())
+    )
+    db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
+    idx = _yoga_rotation_idx(db)
+    if YOGA_ROUTINES[idx]['key'] == routine['key']:
+        _set_setting(db, 'yoga_rotation_idx', str((idx + 1) % len(YOGA_ROUTINES)))
+    db.commit()
+    return jsonify({'success': True, 'yogaNextRoutine': _next_yoga_routine(db)})
 
 
 @app.route('/api/sessions/generic', methods=['POST'])
