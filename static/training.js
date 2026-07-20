@@ -292,7 +292,7 @@
 
       <div class="tr-quick-row">
         <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.startGeneric('yoga')">Start Yoga</button>
-        <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.startGeneric('poci')">Start Poci</button>
+        <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.quickLogPoci()">Log Poci</button>
       </div>
 
       <div class="tr-stat-row">
@@ -684,6 +684,15 @@
     startGeneric(category) {
       if (loadSavedSession()) { state.pendingStart = { type: 'generic', category }; render(); return; }
       doStartGeneric(category);
+    },
+    quickLogPoci() {
+      fetch('/api/sessions/generic', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: 'poci', date: D.today }),
+      }).then(r => r.json()).then(res => {
+        if (res.success) { window.location.href = '/'; }
+        else { showToast('Could not log Poci — try again', 'neutral'); }
+      }).catch(() => showToast('Could not log Poci — try again', 'neutral'));
     },
     cancelPendingStart() { state.pendingStart = null; render(); },
     discardAndStartNew() {
