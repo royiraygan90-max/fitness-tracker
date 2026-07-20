@@ -297,20 +297,24 @@
     </div></div>`;
   }
 
+  function progressChartCard(chart) {
+    return `<div class="tr-chart-card">
+      <div class="tr-chart-head"><div class="tr-chart-title">${esc(chart.label)}</div><div class="tr-chart-sub">last ${chart.bars.length} sessions</div></div>
+      <div class="tr-chart-bars">${chart.bars.map(b => `
+        <div class="tr-chart-bar-col">
+          <span class="tr-chart-bar-val" style="color:${b.valueColor}">${esc(b.value)}</span>
+          <div class="tr-chart-bar" style="height:${b.heightPx}px;background:${b.barColor}"></div>
+          <span class="tr-chart-bar-label">${esc(b.label)}</span>
+        </div>`).join('')}</div>
+    </div>`;
+  }
+
   // ---------- History ----------
   function renderHistory() {
     const filtered = D.history.filter(h => state.historyFilter === 'all' || h.category === state.historyFilter);
     els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
       <div class="tr-greeting" style="margin-top:0">History</div>
-      ${D.progressChart.length ? `<div class="tr-chart-card">
-        <div class="tr-chart-head"><div class="tr-chart-title">${esc(D.progressChartLabel)}</div><div class="tr-chart-sub">last ${D.progressChart.length} sessions</div></div>
-        <div class="tr-chart-bars">${D.progressChart.map(b => `
-          <div class="tr-chart-bar-col">
-            <span class="tr-chart-bar-val" style="color:${b.valueColor}">${esc(b.value)}</span>
-            <div class="tr-chart-bar" style="height:${b.heightPx}px;background:${b.barColor}"></div>
-            <span class="tr-chart-bar-label">${esc(b.label)}</span>
-          </div>`).join('')}</div>
-      </div>` : ''}
+      ${D.progressCharts.map(progressChartCard).join('')}
 
       <div class="tr-filter-row">
         ${['all', 'functional', 'yoga', 'poci'].map(key => {

@@ -602,31 +602,68 @@ def _query_history(db, today, limit=None):
     return items[:limit] if limit else items
 
 
-# Squat (gym) is exercises[0] of workout_a_gym in LIVE_WORKOUT_EXERCISES —
-# see _build_ab_workouts for the id scheme.
-PROGRESS_CHART_EXERCISE_ID = 'workout_a_gym_0'
-PROGRESS_CHART_EXERCISE_LABEL = 'Squat'
-
-
-def _progress_chart(db, today):
+def _progress_chart_bars(db, today, exercise_id, metric):
     rows = list(reversed(db.execute(
-        '''SELECT s.date, ss.weight FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
+        '''SELECT s.date, ss.weight, ss.reps FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
            WHERE ss.exercise_id = ? AND ss.set_index = 0 ORDER BY s.date DESC LIMIT 5''',
-        (PROGRESS_CHART_EXERCISE_ID,)
+        (exercise_id,)
     ).fetchall()))
-    max_kg = max((r['weight'] for r in rows), default=1) or 1
+    vals = [(r['weight'] if metric == 'weight' else r['reps']) or 0 for r in rows]
+    max_val = max(vals, default=1) or 1
+    unit = 'kg' if metric == 'weight' else ''
     out = []
-    for i, r in enumerate(rows):
+    for i, (r, v) in enumerate(zip(rows, vals)):
         d = datetime.strptime(r['date'], '%Y-%m-%d').date()
         is_last = i == len(rows) - 1
         out.append({
-            'value': _fmt_num(r['weight']) + 'kg',
-            'heightPx': max(10, round(96 * (r['weight'] / max_kg))),
+            'value': _fmt_num(v) + unit,
+            'heightPx': max(10, round(96 * (v / max_val))),
             'barColor': GOLD_COLOR if is_last else 'rgba(47,130,255,.55)',
             'valueColor': GOLD_COLOR if is_last else 'rgba(245,243,239,.55)',
             'label': _fmt_rel_date(d, today),
         })
     return out
+
+
+def _is_time_based_exercise(exercise_id):
+    workout_key, _, idx_str = exercise_id.rpartition('_')
+    if not idx_str.isdigit() or workout_key not in LIVE_WORKOUT_EXERCISES:
+        return False
+    exercises = LIVE_WORKOUT_EXERCISES[workout_key]
+    idx = int(idx_str)
+    if idx >= len(exercises):
+        return False
+    reps_str = exercises[idx]['reps']
+    return 'sec' in reps_str or 'min' in reps_str
+
+
+def _all_progress_charts(db, today):
+    """One chart per exercise logged at least twice: a weight chart if it's
+    ever been logged with real weight, otherwise a reps chart for bodyweight
+    exercises (Pull-up, Chin-up, Dips) where reps — not weight — is the real
+    progression signal. Time-held exercises (Core Finisher, Farmer's Carry)
+    are skipped entirely since neither metric is meaningful for those.
+    Ordered by most recently logged."""
+    rows = db.execute(
+        '''SELECT ss.exercise_id, ss.exercise_name, COUNT(DISTINCT ss.session_id) as session_count,
+                  MAX(s.date) as last_date, MAX(ss.weight) as max_weight
+           FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
+           WHERE ss.set_index = 0
+           GROUP BY ss.exercise_id
+           HAVING session_count >= 2
+           ORDER BY last_date DESC'''
+    ).fetchall()
+    charts = []
+    for r in rows:
+        exercise_id = r['exercise_id']
+        if r['max_weight']:
+            metric = 'weight'
+        elif not _is_time_based_exercise(exercise_id):
+            metric = 'reps'
+        else:
+            continue
+        charts.append({'exerciseId': exercise_id, 'label': r['exercise_name'], 'bars': _progress_chart_bars(db, today, exercise_id, metric)})
+    return charts
 
 
 def _body_weight_chart(db, today):
@@ -746,7 +783,7 @@ def _build_initial_data(db):
         'abWorkouts': ab_workouts_out,
         'exerciseNotes': {r['exercise_id']: r['note'] for r in db.execute('SELECT exercise_id, note FROM exercise_notes').fetchall()},
         'history': history,
-        'progressChart': _progress_chart(db, today), 'progressChartLabel': PROGRESS_CHART_EXERCISE_LABEL,
+        'progressCharts': _all_progress_charts(db, today),
         'calendarWeekStart': str(week_start), 'calendarWeek': _build_calendar_week(db, today, week_start),
         'coach': _build_coach_data(db, today),
         'bodyWeightChart': _body_weight_chart(db, today), 'bodyWeightLatest': _latest_body_weight(db),
