@@ -602,20 +602,22 @@ def _query_history(db, today, limit=None):
     return items[:limit] if limit else items
 
 
-def _progress_chart_bars(db, today, exercise_id):
+def _progress_chart_bars(db, today, exercise_id, metric):
     rows = list(reversed(db.execute(
-        '''SELECT s.date, ss.weight FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
+        '''SELECT s.date, ss.weight, ss.reps FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
            WHERE ss.exercise_id = ? AND ss.set_index = 0 ORDER BY s.date DESC LIMIT 5''',
         (exercise_id,)
     ).fetchall()))
-    max_kg = max((r['weight'] for r in rows), default=1) or 1
+    vals = [(r['weight'] if metric == 'weight' else r['reps']) or 0 for r in rows]
+    max_val = max(vals, default=1) or 1
+    unit = 'kg' if metric == 'weight' else ''
     out = []
-    for i, r in enumerate(rows):
+    for i, (r, v) in enumerate(zip(rows, vals)):
         d = datetime.strptime(r['date'], '%Y-%m-%d').date()
         is_last = i == len(rows) - 1
         out.append({
-            'value': _fmt_num(r['weight']) + 'kg',
-            'heightPx': max(10, round(96 * (r['weight'] / max_kg))),
+            'value': _fmt_num(v) + unit,
+            'heightPx': max(10, round(96 * (v / max_val))),
             'barColor': GOLD_COLOR if is_last else 'rgba(47,130,255,.55)',
             'valueColor': GOLD_COLOR if is_last else 'rgba(245,243,239,.55)',
             'label': _fmt_rel_date(d, today),
@@ -623,24 +625,45 @@ def _progress_chart_bars(db, today, exercise_id):
     return out
 
 
+def _is_time_based_exercise(exercise_id):
+    workout_key, _, idx_str = exercise_id.rpartition('_')
+    if not idx_str.isdigit() or workout_key not in LIVE_WORKOUT_EXERCISES:
+        return False
+    exercises = LIVE_WORKOUT_EXERCISES[workout_key]
+    idx = int(idx_str)
+    if idx >= len(exercises):
+        return False
+    reps_str = exercises[idx]['reps']
+    return 'sec' in reps_str or 'min' in reps_str
+
+
 def _all_progress_charts(db, today):
-    """One chart per exercise that's been logged at least twice with real
-    weight recorded — skips bodyweight/time-held exercises (Core Finisher,
-    Farmer's Carry, unweighted Pull-up/Chin-up) since a weight chart for
-    those would just be a flat 0kg line. Ordered by most recently logged."""
+    """One chart per exercise logged at least twice: a weight chart if it's
+    ever been logged with real weight, otherwise a reps chart for bodyweight
+    exercises (Pull-up, Chin-up, Dips) where reps — not weight — is the real
+    progression signal. Time-held exercises (Core Finisher, Farmer's Carry)
+    are skipped entirely since neither metric is meaningful for those.
+    Ordered by most recently logged."""
     rows = db.execute(
         '''SELECT ss.exercise_id, ss.exercise_name, COUNT(DISTINCT ss.session_id) as session_count,
                   MAX(s.date) as last_date, MAX(ss.weight) as max_weight
            FROM session_sets ss JOIN sessions s ON s.id = ss.session_id
            WHERE ss.set_index = 0
            GROUP BY ss.exercise_id
-           HAVING session_count >= 2 AND max_weight > 0
+           HAVING session_count >= 2
            ORDER BY last_date DESC'''
     ).fetchall()
-    return [
-        {'exerciseId': r['exercise_id'], 'label': r['exercise_name'], 'bars': _progress_chart_bars(db, today, r['exercise_id'])}
-        for r in rows
-    ]
+    charts = []
+    for r in rows:
+        exercise_id = r['exercise_id']
+        if r['max_weight']:
+            metric = 'weight'
+        elif not _is_time_based_exercise(exercise_id):
+            metric = 'reps'
+        else:
+            continue
+        charts.append({'exerciseId': exercise_id, 'label': r['exercise_name'], 'bars': _progress_chart_bars(db, today, exercise_id, metric)})
+    return charts
 
 
 def _body_weight_chart(db, today):
