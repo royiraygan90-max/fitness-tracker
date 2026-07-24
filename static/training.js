@@ -345,6 +345,7 @@
 
       <div class="tr-quick-row">
         <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.quickLogWrist()">Wrist Care</button>
+        <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.quickLogTennisElbow()">Tennis Elbow</button>
         <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.quickLogPoci()">Log Poci</button>
       </div>
 
@@ -816,6 +817,18 @@
         if (!res.success) { showToast('Could not log session — try again', 'neutral'); return; }
         D.yogaNextRoutine = res.yogaNextRoutine;
         showToast('Wrist care logged', 'gold');
+        renderScreen();
+      }).catch(() => showToast('Could not log session — try again', 'neutral'));
+    },
+    quickLogTennisElbow() {
+      window.open(D.yogaTennisElbowRoutine.youtube, '_blank');
+      fetch('/api/sessions/yoga', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ routineKey: 'tennis_elbow', date: D.today }),
+      }).then(r => r.json()).then(res => {
+        if (!res.success) { showToast('Could not log session — try again', 'neutral'); return; }
+        D.yogaNextRoutine = res.yogaNextRoutine;
+        showToast('Tennis elbow care logged', 'gold');
         renderScreen();
       }).catch(() => showToast('Could not log session — try again', 'neutral'));
     },

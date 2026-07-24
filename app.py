@@ -808,6 +808,7 @@ def _build_initial_data(db):
         'coach': _build_coach_data(db, today),
         'bodyWeightChart': _body_weight_chart(db, today), 'bodyWeightLatest': _latest_body_weight(db),
         'yogaNextRoutine': _next_yoga_routine(db), 'yogaWristRoutine': YOGA_ROUTINES_BY_KEY['wrist'],
+        'yogaTennisElbowRoutine': YOGA_ROUTINES_BY_KEY['tennis_elbow'],
         'runningNextSession': _next_running_session(db),
     }
 
@@ -1150,9 +1151,9 @@ GENERIC_SESSION_CATEGORIES = {'yoga', 'poci'}
 
 # Real follow-along mobility videos, not a self-assembled pose list — a
 # genuine instructor gives pacing/breathing/safety cues a static list can't.
-# Rotates automatically each time one is logged; the wrist routine is also
-# reachable on its own since carpal tunnel relief benefits from a much
-# higher frequency (research suggests up to daily) than the others.
+# Rotates automatically each time one is logged; the wrist and tennis elbow
+# routines are also reachable on their own since both conditions benefit from
+# a much higher frequency (research suggests up to daily) than the others.
 YOGA_ROUTINES = [
     {'key': 'legs', 'title': 'Leg & Squat Mobility', 'focus': 'Hip and ankle mobility for deeper, safer squats',
      'youtube': 'https://www.youtube.com/watch?v=tuTjC6u03Lg', 'duration_sec': 900},
@@ -1160,6 +1161,8 @@ YOGA_ROUTINES = [
      'youtube': 'https://www.youtube.com/watch?v=6YgehNFlYH0', 'duration_sec': 900},
     {'key': 'wrist', 'title': 'Wrist & Carpal Tunnel Care', 'focus': 'Nerve glides and forearm stretches',
      'youtube': 'https://www.youtube.com/watch?v=TPXaQFC6xT4', 'duration_sec': 600},
+    {'key': 'tennis_elbow', 'title': 'Tennis Elbow Care', 'focus': 'Wrist extensor stretches and eccentric strengthening',
+     'youtube': 'https://www.youtube.com/watch?v=hRP9o8wibj4', 'duration_sec': 600},
 ]
 YOGA_ROUTINES_BY_KEY = {r['key']: r for r in YOGA_ROUTINES}
 
