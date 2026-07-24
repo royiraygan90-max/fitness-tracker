@@ -33,12 +33,12 @@ WORKOUT_A_HOME_EXERCISES = [
 ]
 WORKOUT_B_GYM_EXERCISES = [
     'Romanian Deadlift', 'Upper Chest Fly (cable/pec deck)', 'Cable Row',
-    'Bulgarian Split Squat', 'Tricep Pushdown (cable)', "Farmer's Carry",
+    'Bulgarian Split Squat', 'Tricep Pushdown (cable)', 'Face Pull',
     'EZ-Bar Curl', 'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_HOME_EXERCISES = [
     'Romanian Deadlift (dumbbell)', 'Incline Dumbbell Press', 'Bent-over Dumbbell Row',
-    'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Dumbbell Wrist Curl',
+    'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Reverse Fly (dumbbell)',
     'Dumbbell Hammer Curl', 'Calf Raise (dumbbell)', 'Core Finisher (your choice)'
 ]
 
@@ -99,8 +99,8 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
         {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=odbyvJm7d8s',
          'tip': "Keep elbows pinned at your sides, full extension at the bottom.", 'progression_kg': 2.5},
-        {'name': "Farmer's Carry", 'sets': 2, 'reps': '30–40 sec', 'youtube': 'https://www.youtube.com/watch?v=VBobkldqqvk',
-         'tip': "Stand tall, shoulders back, brace your core. Walk with short, controlled steps.", 'progression_kg': None},
+        {'name': 'Face Pull', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=7z65m-qWJrA',
+         'tip': "Pull the rope to your forehead, elbows high and wide. Squeeze your shoulder blades together at the end.", 'progression_kg': 2.5},
         {'name': 'EZ-Bar Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=5NsFLGUf0Fo',
          'tip': "Elbows pinned to your sides, squeeze at the top, control the negative.", 'progression_kg': 2.5},
         {'name': 'Calf Raise (machine)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=97NbelB5yvQ',
@@ -119,8 +119,8 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
         {'name': 'Tricep Kickback (dumbbell)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=IqgklYrtcUo',
          'tip': "Keep your upper arm still, extend through the elbow only.", 'progression_kg': 2.5},
-        {'name': 'Dumbbell Wrist Curl', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/watch?v=JtZ_iT8rn70',
-         'tip': "Forearms on your thighs or a bench, palms up, curl through a full range.", 'progression_kg': 2.5},
+        {'name': 'Reverse Fly (dumbbell)', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=JeSlI2s4XfM',
+         'tip': "Hinge forward, soft bend in the elbows. Raise the dumbbells out to the sides, squeezing your shoulder blades together.", 'progression_kg': 2.5},
         {'name': 'Dumbbell Hammer Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/watch?v=FNvndC4Ov04',
          'tip': "Neutral grip (palms facing in) the whole way. No swinging.", 'progression_kg': 2.5},
         {'name': 'Calf Raise (dumbbell)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/watch?v=HvvqTpTongY',
@@ -661,8 +661,8 @@ def _all_progress_charts(db, today):
     """One chart per exercise logged at least twice: a weight chart if it's
     ever been logged with real weight, otherwise a reps chart for bodyweight
     exercises (Pull-up, Chin-up, Dips) where reps — not weight — is the real
-    progression signal. Time-held exercises (Core Finisher, Farmer's Carry)
-    are skipped entirely since neither metric is meaningful for those.
+    progression signal. Time-held exercises (Core Finisher) are skipped
+    entirely since neither metric is meaningful for those.
     Ordered by most recently logged."""
     rows = db.execute(
         '''SELECT ss.exercise_id, ss.exercise_name, COUNT(DISTINCT ss.session_id) as session_count,
