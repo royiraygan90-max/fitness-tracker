@@ -28,6 +28,7 @@
     genericRunning: false,
     genericElapsed: 0,
     genericNotes: '',
+    homeTrainTab: 'yoga',
     runningWeek: null,
     runningDay: null,
     runningIdx: 0,
@@ -275,10 +276,9 @@
     </div>`;
   }
 
-  function renderYogaCard() {
+  function renderYogaCardBody() {
     const routine = D.yogaNextRoutine;
-    return `<div class="tr-chart-card">
-      <div class="tr-chart-head">
+    return `<div class="tr-chart-head">
         <div class="tr-chart-title">Yoga &amp; Mobility</div>
         <div class="tr-chart-sub">${esc(routine.focus)}</div>
       </div>
@@ -286,17 +286,15 @@
       <div class="tr-yoga-actions">
         <a class="tr-yoga-watch-btn" href="${esc(routine.youtube)}" target="_blank" rel="noopener noreferrer">Watch Video ↗</a>
         <button class="tr-yoga-done-btn" onclick="App.markYogaDone('${routine.key}')">Mark Done</button>
-      </div>
-    </div>`;
+      </div>`;
   }
 
-  function renderRunningCard() {
+  function renderRunningCardBody() {
     const s = D.runningNextSession;
     const runSec = s.intervals.filter(i => i.type === 'run').reduce((a, i) => a + i.duration_sec, 0);
     const totalMin = Math.round(s.totalDurationSec / 60);
     const runMin = Math.round(runSec / 60);
-    return `<div class="tr-chart-card">
-      <div class="tr-chart-head">
+    return `<div class="tr-chart-head">
         <div class="tr-chart-title">Running</div>
         <div class="tr-chart-sub">${s.graduated ? 'Program complete' : `Week ${s.week} of ${s.totalWeeks}`}</div>
       </div>
@@ -304,7 +302,21 @@
       <div class="tr-chart-sub" style="margin-top:4px">${totalMin} min total, ${runMin} min running</div>
       <div class="tr-yoga-actions">
         <button class="tr-yoga-done-btn" style="flex:none;width:100%;background:${COLORS.running}" onclick="App.startRunning()">Start Run</button>
+      </div>`;
+  }
+
+  function renderTrainCard() {
+    const tab = state.homeTrainTab;
+    const tabBtn = (key, label) => {
+      const active = tab === key;
+      return `<button class="tr-filter-btn" style="border:1px solid ${active ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.08)'};background:${active ? 'rgba(255,255,255,.1)' : 'transparent'};color:${active ? '#F5F3EF' : 'rgba(245,243,239,.45)'}" onclick="App.setHomeTrainTab('${key}')">${label}</button>`;
+    };
+    return `<div class="tr-chart-card">
+      <div class="tr-filter-row" style="margin-bottom:14px">
+        ${tabBtn('yoga', 'Yoga')}
+        ${tabBtn('running', 'Running')}
       </div>
+      ${tab === 'running' ? renderRunningCardBody() : renderYogaCardBody()}
     </div>`;
   }
 
@@ -336,8 +348,7 @@
         <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.quickLogPoci()">Log Poci</button>
       </div>
 
-      ${renderYogaCard()}
-      ${renderRunningCard()}
+      ${renderTrainCard()}
 
       <div class="tr-stat-row">
         <div class="tr-stat-card"><div class="tr-stat-value">${D.weekCount}</div><div class="tr-stat-label">sessions this week</div></div>
@@ -1010,6 +1021,7 @@
         .catch(() => showToast('Could not delete — try again', 'neutral'));
     },
     setHistoryFilter(f) { state.historyFilter = f; renderScreen(); },
+    setHomeTrainTab(t) { state.homeTrainTab = t; renderScreen(); },
     backHome() {
       // A session was just saved server-side — reload so Home/History
       // pick up the fresh streak, PR, history and chart data.
