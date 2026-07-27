@@ -265,6 +265,7 @@ def _create_tables(conn):
             duration_sec INTEGER NOT NULL,
             pr_count INTEGER DEFAULT 0,
             notes TEXT,
+            distance_km REAL,
             created_at TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS session_sets (
@@ -303,6 +304,10 @@ def _migrate_db(conn):
     cols = [row[1] for row in conn.execute('PRAGMA table_info(workout_exercises)').fetchall()]
     if 'weight_kg' not in cols:
         conn.execute('ALTER TABLE workout_exercises ADD COLUMN weight_kg TEXT')
+        conn.commit()
+    session_cols = [row[1] for row in conn.execute('PRAGMA table_info(sessions)').fetchall()]
+    if 'distance_km' not in session_cols:
+        conn.execute('ALTER TABLE sessions ADD COLUMN distance_km REAL')
         conn.commit()
 
 
@@ -391,6 +396,15 @@ def _fmt_num(v):
         return '0'
     f = float(v)
     return str(int(f)) if f == int(f) else str(f)
+
+
+def _fmt_pace(distance_km, duration_sec):
+    """Average pace as 'M:SS/km', or None if distance is missing/zero."""
+    if not distance_km:
+        return None
+    pace_sec = duration_sec / distance_km
+    m, s = divmod(round(pace_sec), 60)
+    return f'{m}:{s:02d}/km'
 
 
 def _fmt_rel_date(d, today):
@@ -541,7 +555,7 @@ def _format_legacy_exercise_line(name, sets, reps, weight_kg):
 def _query_history(db, today, limit=None):
     items = []
     for r in db.execute(
-        'SELECT id, date, session_type, workout_key, yoga_key, duration_sec, pr_count, notes '
+        'SELECT id, date, session_type, workout_key, yoga_key, duration_sec, pr_count, notes, distance_km '
         'FROM sessions ORDER BY date DESC, id DESC'
     ).fetchall():
         d = datetime.strptime(r['date'], '%Y-%m-%d').date()
@@ -570,11 +584,15 @@ def _query_history(db, today, limit=None):
                 'exercises': [], 'notes': r['notes'] or '', 'focusTags': [],
             })
         elif r['session_type'] == 'running':
+            is_free = r['distance_km'] is not None
             items.append({
                 'id': 's' + str(r['id']), 'category': 'running', 'legacy': False, 'accent': RUNNING_COLOR,
-                'title': r['notes'] or 'Run', 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+                'title': f"{_fmt_num(r['distance_km'])} km Run" if is_free else (r['notes'] or 'Run'),
+                'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': 0,
-                'exercises': [], 'notes': '', 'focusTags': [],
+                'exercises': [], 'notes': (r['notes'] or '') if is_free else '', 'focusTags': [],
+                'distanceKm': _fmt_num(r['distance_km']) if is_free else None,
+                'pace': _fmt_pace(r['distance_km'], r['duration_sec']) if is_free else None,
             })
         else:
             items.append({
@@ -712,6 +730,60 @@ def _latest_body_weight(db):
     return {'date': row['date'], 'weightKg': _fmt_num(row['weight_kg'])}
 
 
+def _running_distance_chart(db, today):
+    """Bar chart of the last 8 free runs by distance — structured C25K
+    sessions don't carry a real distance so they're naturally excluded."""
+    rows = list(reversed(db.execute(
+        "SELECT date, distance_km FROM sessions WHERE session_type='running' AND distance_km IS NOT NULL "
+        "ORDER BY date DESC, id DESC LIMIT 8"
+    ).fetchall()))
+    max_km = max((r['distance_km'] for r in rows), default=1) or 1
+    out = []
+    for i, r in enumerate(rows):
+        d = datetime.strptime(r['date'], '%Y-%m-%d').date()
+        is_last = i == len(rows) - 1
+        out.append({
+            'value': _fmt_num(r['distance_km']) + 'km',
+            'heightPx': max(10, round(96 * (r['distance_km'] / max_km))),
+            'barColor': GOLD_COLOR if is_last else RUNNING_COLOR,
+            'valueColor': GOLD_COLOR if is_last else 'rgba(245,243,239,.55)',
+            'label': _fmt_rel_date(d, today),
+        })
+    return out
+
+
+def _running_stats(db):
+    """Aggregate stats across every running session (C25K + free runs) for
+    time, but distance/pace PRs only ever look at free runs, since
+    structured sessions don't track a real distance."""
+    totals = db.execute(
+        "SELECT COUNT(*) as cnt, COALESCE(SUM(duration_sec),0) as total_sec "
+        "FROM sessions WHERE session_type='running'"
+    ).fetchone()
+    dist_total = db.execute(
+        "SELECT COALESCE(SUM(distance_km),0) as total_km FROM sessions "
+        "WHERE session_type='running' AND distance_km IS NOT NULL"
+    ).fetchone()
+    longest = db.execute(
+        "SELECT distance_km FROM sessions WHERE session_type='running' AND distance_km IS NOT NULL "
+        "ORDER BY distance_km DESC LIMIT 1"
+    ).fetchone()
+    best_pace_row, best_pace_sec = None, None
+    for r in db.execute(
+        "SELECT distance_km, duration_sec FROM sessions WHERE session_type='running' AND distance_km IS NOT NULL"
+    ).fetchall():
+        pace_sec = r['duration_sec'] / r['distance_km']
+        if best_pace_sec is None or pace_sec < best_pace_sec:
+            best_pace_row, best_pace_sec = r, pace_sec
+    return {
+        'runCount': totals['cnt'],
+        'totalTimeMin': round(totals['total_sec'] / 60),
+        'totalDistanceKm': _fmt_num(dist_total['total_km']),
+        'longestRunKm': _fmt_num(longest['distance_km']) if longest else None,
+        'bestPace': _fmt_pace(best_pace_row['distance_km'], best_pace_row['duration_sec']) if best_pace_row else None,
+    }
+
+
 def _build_calendar_week(db, today, start):
     """7 days from `start` (a Sunday) — each day is either a completed
     session ('done'), a workout planned for a future/today date but not
@@ -810,6 +882,7 @@ def _build_initial_data(db):
         'yogaNextRoutine': _next_yoga_routine(db), 'yogaWristRoutine': YOGA_ROUTINES_BY_KEY['wrist'],
         'yogaTennisElbowRoutine': YOGA_ROUTINES_BY_KEY['tennis_elbow'],
         'runningNextSession': _next_running_session(db),
+        'runningStats': _running_stats(db), 'runningDistanceChart': _running_distance_chart(db, today),
     }
 
 
@@ -1301,6 +1374,36 @@ def save_running_session():
         _set_setting(db, 'running_day', str(next_day))
     db.commit()
     return jsonify({'success': True, 'runningNextSession': _next_running_session(db)})
+
+
+@app.route('/api/sessions/running/free', methods=['POST'])
+def save_free_run():
+    """A plain, unstructured run (not the C25K program) — just distance and
+    duration. Doesn't touch running_week/running_day since it's not a
+    program session."""
+    data = request.get_json(silent=True) or {}
+    try:
+        distance_km = float(data.get('distanceKm'))
+        duration_sec = int(data.get('durationSec'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid distance/duration'}), 400
+    if distance_km <= 0 or duration_sec <= 0:
+        return jsonify({'error': 'Invalid distance/duration'}), 400
+    session_date = data.get('date', str(date.today()))
+    notes = str(data.get('notes', ''))[:2000]
+
+    db = get_db()
+    db.execute(
+        'INSERT INTO sessions (date, session_type, duration_sec, notes, distance_km, created_at) VALUES (?,?,?,?,?,?)',
+        (session_date, 'running', duration_sec, notes, distance_km, datetime.now().isoformat())
+    )
+    db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
+    db.commit()
+    return jsonify({
+        'success': True,
+        'runningStats': _running_stats(db),
+        'runningDistanceChart': _running_distance_chart(db, date.today()),
+    })
 
 
 @app.route('/api/sessions/generic', methods=['POST'])

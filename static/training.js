@@ -29,6 +29,8 @@
     genericElapsed: 0,
     genericNotes: '',
     homeTrainTab: 'yoga',
+    freeRunSheetOpen: false,
+    freeRunSaving: false,
     runningWeek: null,
     runningDay: null,
     runningIdx: 0,
@@ -207,6 +209,7 @@
     }
     if (s.category === 'yoga' || s.category === 'poci' || s.category === 'running') {
       const parts = [];
+      if (s.category === 'running' && s.pace) parts.push(s.pace);
       if (s.durationMin) parts.push(s.durationMin + ' min');
       if (s.notes) parts.push(s.notes.slice(0, 40));
       return parts.join(' · ') || 'Logged';
@@ -305,7 +308,8 @@
       <div class="tr-chart-sub" style="margin-top:4px">${totalMin} min total, ${runMin} min running</div>
       <div class="tr-yoga-actions">
         <button class="tr-yoga-done-btn" style="flex:none;width:100%;background:${COLORS.running}" onclick="App.startRunning()">Start Run</button>
-      </div>`;
+      </div>
+      <button class="tr-link-btn" style="display:block;margin-top:10px;color:${COLORS.running}" onclick="App.openRunningHub()">Full running page, stats &amp; free runs →</button>`;
   }
 
   function renderTrainCard() {
@@ -417,6 +421,8 @@
       metaLine = h.exercises.length + ' exercises' + (h.prCount ? ' · ' + h.prCount + ' PR' + (h.prCount > 1 ? 's' : '') : '') + (h.durationMin ? ' · ' + h.durationMin + ' min' : '');
     } else if (h.category === 'yoga' || h.category === 'poci') {
       metaLine = h.durationMin ? h.durationMin + ' min' : (h.notes ? h.notes.slice(0, 60) : 'Logged');
+    } else if (h.category === 'running') {
+      metaLine = h.distanceKm ? `${h.pace} · ${h.durationMin} min` : (h.durationMin ? h.durationMin + ' min' : 'Logged');
     } else {
       metaLine = h.durationMin ? h.durationMin + ' min' : (h.notes ? h.notes.slice(0, 60) : 'Logged manually');
     }
@@ -481,6 +487,113 @@
         ${c.exercises.length ? c.exercises.map(coachExerciseRow).join('') : '<div class="tr-empty">Log a few sessions and personalized progress tips will show up here.</div>'}
       </div>
     </div></div>`;
+  }
+
+  // ---------- Running Hub ----------
+  function renderRunningHub() {
+    const s = D.runningNextSession;
+    const stats = D.runningStats;
+    const chart = D.runningDistanceChart;
+    const runSec = s.intervals.filter(i => i.type === 'run').reduce((a, i) => a + i.duration_sec, 0);
+    const totalMin = Math.round(s.totalDurationSec / 60);
+    const runMin = Math.round(runSec / 60);
+    const totalSessions = s.totalWeeks * 3;
+    const sessionsDone = s.graduated ? totalSessions : (s.week - 1) * 3 + (s.day - 1);
+    const recentRuns = D.history.filter(h => h.category === 'running').slice(0, 5);
+
+    els.root.innerHTML = `<div class="tr-live-header">
+        <div class="tr-live-topbar">
+          <button class="tr-icon-btn" onclick="App.closeRunningHub()">${iconClose()}</button>
+          <div class="tr-live-title-block">
+            <div class="tr-live-title">Running</div>
+            <div class="tr-live-sub">${s.graduated ? 'Program complete' : `${sessionsDone} of ${totalSessions} sessions`}</div>
+          </div>
+          <div style="width:34px"></div>
+        </div>
+      </div>
+      <div class="tr-screen"><div class="tr-screen-pad" style="padding-top:16px">
+
+        <div class="tr-chart-card">
+          <div class="tr-chart-head">
+            <div class="tr-chart-title">${s.graduated ? 'Maintenance run' : `Week ${s.week} of ${s.totalWeeks}`}</div>
+            <div class="tr-chart-sub">${s.graduated ? '' : `Day ${s.day} of 3`}</div>
+          </div>
+          <div class="tr-chart-sub" style="margin-top:4px">${totalMin} min total, ${runMin} min running</div>
+          <div class="tr-yoga-actions">
+            <button class="tr-yoga-done-btn" style="flex:none;width:100%;background:${COLORS.running}" onclick="App.startRunning()">Start Run</button>
+          </div>
+        </div>
+
+        <button class="tr-quick-btn" style="width:100%;margin-top:14px;border-color:${COLORS.running};color:${COLORS.running}" onclick="App.openFreeRunSheet()">Log a Free Run</button>
+
+        <div class="tr-stat-row" style="margin-top:16px">
+          <div class="tr-stat-card"><div class="tr-stat-value">${esc(stats.totalDistanceKm)}km</div><div class="tr-stat-label">total distance</div></div>
+          <div class="tr-stat-card"><div class="tr-stat-value">${stats.totalTimeMin}min</div><div class="tr-stat-label">total time running</div></div>
+        </div>
+        <div class="tr-stat-row" style="margin-top:10px">
+          <div class="tr-stat-card"><div class="tr-stat-value tr-gold">${stats.longestRunKm ? esc(stats.longestRunKm) + 'km' : '—'}</div><div class="tr-stat-label">longest run</div></div>
+          <div class="tr-stat-card"><div class="tr-stat-value tr-gold">${stats.bestPace ? esc(stats.bestPace) : '—'}</div><div class="tr-stat-label">best pace</div></div>
+        </div>
+
+        ${chart.length ? `<div class="tr-chart-card" style="margin-top:16px">
+          <div class="tr-chart-head"><div class="tr-chart-title">Distance</div><div class="tr-chart-sub">last ${chart.length} free run${chart.length > 1 ? 's' : ''}</div></div>
+          <div class="tr-chart-bars">${chart.map(b => `
+            <div class="tr-chart-bar-col">
+              <span class="tr-chart-bar-val" style="color:${b.valueColor}">${esc(b.value)}</span>
+              <div class="tr-chart-bar" style="height:${b.heightPx}px;background:${b.barColor}"></div>
+              <span class="tr-chart-bar-label">${esc(b.label)}</span>
+            </div>`).join('')}</div>
+        </div>` : ''}
+
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:20px">
+          <div class="tr-card-eyebrow" style="color:rgba(245,243,239,.4)">RECENT RUNS</div>
+          ${recentRuns.length ? `<button class="tr-link-btn" style="color:${COLORS.running}" onclick="App.viewRunningHistory()">View all</button>` : ''}
+        </div>
+        ${recentRuns.length ? recentRuns.map(r => `
+          <div class="tr-last-session" onclick="App.viewRunningHistory()">
+            <div class="tr-dot" style="background:${r.accent}"></div>
+            <div style="flex:1">
+              <div class="tr-last-session-label">${esc(r.dateLabel)}</div>
+              <div class="tr-last-session-title">${esc(r.title)}</div>
+              <div class="tr-last-session-meta">${r.durationMin} min${r.pace ? ' · ' + esc(r.pace) : ''}</div>
+            </div>
+          </div>`).join('') : '<div class="tr-empty">No runs logged yet.</div>'}
+
+      </div></div>`;
+  }
+
+  function renderFreeRunSheet() {
+    if (!state.freeRunSheetOpen) { els.sheetRoot.innerHTML = ''; return; }
+    els.sheetRoot.innerHTML = `<div class="tr-sheet-backdrop" onclick="App.closeFreeRunSheet()">
+      <div class="tr-sheet" onclick="event.stopPropagation()">
+        <div class="tr-sheet-title">Log a free run</div>
+        <div class="tr-sheet-sub">No intervals — just distance and time.</div>
+        <div class="tr-freerun-row">
+          <div class="tr-freerun-field">
+            <label class="tr-freerun-label">Distance (km)</label>
+            <input type="number" inputmode="decimal" id="freerun-distance" placeholder="5.0" onfocus="this.select()"/>
+          </div>
+        </div>
+        <div class="tr-freerun-row">
+          <div class="tr-freerun-field">
+            <label class="tr-freerun-label">Minutes</label>
+            <input type="number" inputmode="numeric" id="freerun-min" placeholder="30" onfocus="this.select()"/>
+          </div>
+          <div class="tr-freerun-field">
+            <label class="tr-freerun-label">Seconds</label>
+            <input type="number" inputmode="numeric" id="freerun-sec" placeholder="0" onfocus="this.select()"/>
+          </div>
+        </div>
+        <div class="tr-freerun-row">
+          <div class="tr-freerun-field">
+            <label class="tr-freerun-label">Notes (optional)</label>
+            <input type="text" id="freerun-notes" placeholder="e.g. ran with a friend"/>
+          </div>
+        </div>
+        <button class="tr-btn-cta" style="margin-top:16px;background:${COLORS.running}" ${state.freeRunSaving ? 'disabled' : ''} onclick="App.submitFreeRun()">Save Run</button>
+        <button class="tr-sheet-cancel" onclick="App.closeFreeRunSheet()">Cancel</button>
+      </div>
+    </div>`;
   }
 
   // ---------- Warmup ----------
@@ -715,6 +828,7 @@
     else if (state.screen === 'live-functional') renderLiveFunctional();
     else if (state.screen === 'live-generic') renderLiveGeneric();
     else if (state.screen === 'live-running') renderLiveRunning();
+    else if (state.screen === 'running-hub') renderRunningHub();
     else if (state.screen === 'complete') renderComplete();
   }
   function render() {
@@ -723,6 +837,7 @@
     renderToast();
     renderPlanSheet();
     renderResumeConflictSheet();
+    renderFreeRunSheet();
   }
 
   // ---------- start-workout (actually applying it, once no unsaved session is in the way) ----------
@@ -1038,6 +1153,41 @@
     },
     setHistoryFilter(f) { state.historyFilter = f; renderScreen(); },
     setHomeTrainTab(t) { state.homeTrainTab = t; renderScreen(); },
+    openRunningHub() { state.screen = 'running-hub'; state.activeTab = null; render(); },
+    closeRunningHub() { state.screen = 'home'; state.activeTab = 'home'; render(); },
+    viewRunningHistory() { state.historyFilter = 'running'; App.goTab('history'); },
+    openFreeRunSheet() { state.freeRunSheetOpen = true; render(); },
+    closeFreeRunSheet() { state.freeRunSheetOpen = false; render(); },
+    submitFreeRun() {
+      if (state.freeRunSaving) return;
+      const distanceKm = parseFloat(document.getElementById('freerun-distance').value);
+      const min = parseInt(document.getElementById('freerun-min').value, 10) || 0;
+      const sec = parseInt(document.getElementById('freerun-sec').value, 10) || 0;
+      const notes = document.getElementById('freerun-notes').value.trim();
+      const durationSec = min * 60 + sec;
+      if (!distanceKm || distanceKm <= 0 || durationSec <= 0) {
+        showToast('Enter a distance and a time greater than zero', 'neutral');
+        return;
+      }
+      state.freeRunSaving = true;
+      renderFreeRunSheet();
+      fetch('/api/sessions/running/free', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ distanceKm, durationSec, notes, date: D.today }),
+      }).then(r => r.json()).then(res => {
+        state.freeRunSaving = false;
+        if (!res.success) { showToast('Could not save — try again', 'neutral'); renderFreeRunSheet(); return; }
+        D.runningStats = res.runningStats;
+        D.runningDistanceChart = res.runningDistanceChart;
+        state.freeRunSheetOpen = false;
+        showToast('Run logged', 'gold');
+        render();
+      }).catch(() => {
+        state.freeRunSaving = false;
+        showToast('Could not save — try again', 'neutral');
+        renderFreeRunSheet();
+      });
+    },
     backHome() {
       // A session was just saved server-side — reload so Home/History
       // pick up the fresh streak, PR, history and chart data.
