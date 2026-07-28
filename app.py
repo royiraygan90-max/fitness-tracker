@@ -266,6 +266,7 @@ def _create_tables(conn):
             pr_count INTEGER DEFAULT 0,
             notes TEXT,
             distance_km REAL,
+            client_token TEXT,
             created_at TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS session_sets (
@@ -309,6 +310,14 @@ def _migrate_db(conn):
     if 'distance_km' not in session_cols:
         conn.execute('ALTER TABLE sessions ADD COLUMN distance_km REAL')
         conn.commit()
+    if 'client_token' not in session_cols:
+        conn.execute('ALTER TABLE sessions ADD COLUMN client_token TEXT')
+        conn.commit()
+    # Partial index (NULLs excluded) so retried saves that carry the same
+    # client_token can't create a duplicate session row, while old rows and
+    # requests without a token are unaffected.
+    conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_client_token ON sessions(client_token) WHERE client_token IS NOT NULL')
+    conn.commit()
 
 
 def init_db():
@@ -445,6 +454,21 @@ def _last_set_for_exercise(db, exercise_id):
         (exercise_id,)
     ).fetchone()
     return {'weight': row['weight'], 'reps': row['reps']} if row else {'weight': 0, 'reps': 0}
+
+
+def _client_token_from(data):
+    """Pull a client-supplied idempotency token out of a save request. A save
+    route that receives the same token twice (e.g. a retry after a dropped
+    response, not a genuinely new session) should skip re-inserting."""
+    token = data.get('clientToken')
+    return str(token)[:64] if token else None
+
+
+def _already_saved(db, token):
+    if not token:
+        return None
+    row = db.execute('SELECT id FROM sessions WHERE client_token=?', (token,)).fetchone()
+    return row['id'] if row else None
 
 
 def _best_weight_for_exercise(db, exercise_id):
@@ -1173,11 +1197,19 @@ def save_functional_session():
     notes = data.get('notes') or {}
     if not isinstance(exercises, list) or not isinstance(notes, dict):
         return jsonify({'error': 'Invalid payload'}), 400
+    client_token = _client_token_from(data)
 
     db = get_db()
+    existing_id = _already_saved(db, client_token)
+    if existing_id is not None:
+        # Same request retried after the response was lost (e.g. dropped
+        # wifi) — the workout is already saved, don't log it a second time.
+        row = db.execute('SELECT pr_count FROM sessions WHERE id=?', (existing_id,)).fetchone()
+        return jsonify({'success': True, 'prCount': row['pr_count']})
+
     cur = db.execute(
-        'INSERT INTO sessions (date, session_type, workout_key, duration_sec, pr_count, created_at) VALUES (?,?,?,?,?,?)',
-        (session_date, 'functional', workout_key, duration_sec, 0, datetime.now().isoformat())
+        'INSERT INTO sessions (date, session_type, workout_key, duration_sec, pr_count, client_token, created_at) VALUES (?,?,?,?,?,?,?)',
+        (session_date, 'functional', workout_key, duration_sec, 0, client_token, datetime.now().isoformat())
     )
     session_id = cur.lastrowid
     pr_count = 0
@@ -1359,11 +1391,17 @@ def save_running_session():
         return jsonify({'error': 'Invalid week/day'}), 400
     session_date = data.get('date', str(date.today()))
     duration_sec = sum(i['duration_sec'] for i in session['intervals'])
+    client_token = _client_token_from(data)
 
     db = get_db()
+    if _already_saved(db, client_token) is not None:
+        # Already logged (and progress already advanced) by the original
+        # request — this is a retry after a dropped response.
+        return jsonify({'success': True, 'runningNextSession': _next_running_session(db)})
+
     db.execute(
-        'INSERT INTO sessions (date, session_type, duration_sec, notes, created_at) VALUES (?,?,?,?,?)',
-        (session_date, 'running', duration_sec, f'Week {week} · Day {day}', datetime.now().isoformat())
+        'INSERT INTO sessions (date, session_type, duration_sec, notes, client_token, created_at) VALUES (?,?,?,?,?,?)',
+        (session_date, 'running', duration_sec, f'Week {week} · Day {day}', client_token, datetime.now().isoformat())
     )
     db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
     cur_week, cur_day = _running_progress(db)
@@ -1391,14 +1429,16 @@ def save_free_run():
         return jsonify({'error': 'Invalid distance/duration'}), 400
     session_date = data.get('date', str(date.today()))
     notes = str(data.get('notes', ''))[:2000]
+    client_token = _client_token_from(data)
 
     db = get_db()
-    db.execute(
-        'INSERT INTO sessions (date, session_type, duration_sec, notes, distance_km, created_at) VALUES (?,?,?,?,?,?)',
-        (session_date, 'running', duration_sec, notes, distance_km, datetime.now().isoformat())
-    )
-    db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
-    db.commit()
+    if _already_saved(db, client_token) is None:
+        db.execute(
+            'INSERT INTO sessions (date, session_type, duration_sec, notes, distance_km, client_token, created_at) VALUES (?,?,?,?,?,?,?)',
+            (session_date, 'running', duration_sec, notes, distance_km, client_token, datetime.now().isoformat())
+        )
+        db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
+        db.commit()
     return jsonify({
         'success': True,
         'runningStats': _running_stats(db),
@@ -1420,11 +1460,15 @@ def save_generic_session():
     except (TypeError, ValueError):
         duration_sec = 60
     notes = str(data.get('notes', ''))[:2000]
+    client_token = _client_token_from(data)
 
     db = get_db()
+    if _already_saved(db, client_token) is not None:
+        return jsonify({'success': True})
+
     db.execute(
-        'INSERT INTO sessions (date, session_type, duration_sec, notes, created_at) VALUES (?,?,?,?,?)',
-        (session_date, category, duration_sec, notes, datetime.now().isoformat())
+        'INSERT INTO sessions (date, session_type, duration_sec, notes, client_token, created_at) VALUES (?,?,?,?,?,?)',
+        (session_date, category, duration_sec, notes, client_token, datetime.now().isoformat())
     )
     db.execute('DELETE FROM planned_workouts WHERE date=?', (session_date,))
     db.commit()

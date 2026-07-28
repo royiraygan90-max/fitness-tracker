@@ -43,6 +43,8 @@
     expandedHistoryId: null,
     sessionStartMs: null,
     sessionPRCount: 0,
+    sessionToken: null,
+    freeRunToken: null,
     completionStats: null,
     saving: false,
     calendarWeekStart: D.calendarWeekStart,
@@ -99,6 +101,13 @@
   function fmtMonthDay(dateStr) {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
+  // A per-session id sent as clientToken on save requests, so if the network
+  // drops after the server saves but before the response arrives, retrying
+  // the same finish action can't create a duplicate session — see
+  // _already_saved() in app.py.
+  function genClientToken() {
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
 
   // ---------- wall-clock timers ----------
   // Countdowns/stopwatches are driven off absolute timestamps (not a per-tick
@@ -136,7 +145,7 @@
       genericRunningSinceMs: state.genericRunningSinceMs,
       runningWeek: state.runningWeek, runningDay: state.runningDay,
       runningIdx: state.runningIdx, runningSecLeft: state.runningSecLeft, runningEndsAt: state.runningEndsAt,
-      sessionStartMs: state.sessionStartMs, sessionPRCount: state.sessionPRCount,
+      sessionStartMs: state.sessionStartMs, sessionPRCount: state.sessionPRCount, sessionToken: state.sessionToken,
       savedAt: Date.now(),
     }));
   }
@@ -850,6 +859,7 @@
     state.restActive = false;
     state.sessionStartMs = Date.now();
     state.sessionPRCount = 0;
+    state.sessionToken = genClientToken();
     state.warmupIdx = 0;
     state.warmupSecLeft = WARMUP_ITEMS[0].duration || 0;
     state.warmupEndsAt = WARMUP_ITEMS[0].type === 'timed' ? Date.now() + WARMUP_ITEMS[0].duration * 1000 : null;
@@ -865,6 +875,7 @@
     state.genericRunningSinceMs = Date.now();
     state.genericNotes = '';
     state.sessionStartMs = Date.now();
+    state.sessionToken = genClientToken();
     state.screen = 'live-generic';
     state.activeTab = null;
     saveSession();
@@ -878,6 +889,7 @@
     state.runningSecLeft = session.intervals[0].duration_sec;
     state.runningEndsAt = Date.now() + session.intervals[0].duration_sec * 1000;
     state.sessionStartMs = Date.now();
+    state.sessionToken = genClientToken();
     state.screen = 'live-running';
     state.activeTab = null;
     saveSession();
@@ -998,7 +1010,7 @@
       const session = D.runningNextSession;
       fetch('/api/sessions/running', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ week: session.week, day: session.day, date: D.today }),
+        body: JSON.stringify({ week: session.week, day: session.day, date: D.today, clientToken: state.sessionToken }),
       }).then(r => r.json()).then(res => {
         state.saving = false;
         if (!res.success) { showToast('Could not save — check your connection and try again', 'neutral'); renderScreen(); return; }
@@ -1105,7 +1117,7 @@
 
       fetch('/api/sessions/functional', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workoutKey: state.activeWorkoutKey, date: D.today, durationSec, exercises: exercisesPayload, notes: notesPayload }),
+        body: JSON.stringify({ workoutKey: state.activeWorkoutKey, date: D.today, durationSec, exercises: exercisesPayload, notes: notesPayload, clientToken: state.sessionToken }),
       }).then(r => r.json()).then(res => {
         state.saving = false;
         state.completionStats = { type: 'functional', title: workout.label, durationSec, volume, prCount: (res && res.prCount) || state.sessionPRCount };
@@ -1139,7 +1151,7 @@
       const durationSec = currentGenericElapsed() || Math.max(1, Math.round((Date.now() - state.sessionStartMs) / 1000));
       fetch('/api/sessions/generic', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, date: D.today, durationSec, notes: state.genericNotes }),
+        body: JSON.stringify({ category, date: D.today, durationSec, notes: state.genericNotes, clientToken: state.sessionToken }),
       }).then(r => r.json()).then(() => {
         state.saving = false;
         state.completionStats = { type: 'generic', category, title: genericLabel(category), durationSec };
@@ -1166,7 +1178,7 @@
     },
     setHistoryFilter(f) { state.historyFilter = f; renderScreen(); },
     viewRunningHistory() { state.historyFilter = 'running'; App.goTab('history'); },
-    openFreeRunSheet() { state.freeRunSheetOpen = true; render(); },
+    openFreeRunSheet() { state.freeRunSheetOpen = true; state.freeRunToken = genClientToken(); render(); },
     closeFreeRunSheet() { state.freeRunSheetOpen = false; render(); },
     submitFreeRun() {
       if (state.freeRunSaving) return;
@@ -1183,7 +1195,7 @@
       renderFreeRunSheet();
       fetch('/api/sessions/running/free', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ distanceKm, durationSec, notes, date: D.today }),
+        body: JSON.stringify({ distanceKm, durationSec, notes, date: D.today, clientToken: state.freeRunToken }),
       }).then(r => r.json()).then(res => {
         state.freeRunSaving = false;
         if (!res.success) { showToast('Could not save — try again', 'neutral'); renderFreeRunSheet(); return; }
