@@ -22,7 +22,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'poci', 'flexibility'}
 
 WORKOUT_A_GYM_EXERCISES = [
-    'Squat', 'Bench Press', 'Pull-up', 'Lateral Raise', 'Cable Bicep Curl',
+    'Squat', 'Bench Press', 'Lat Pulldown', 'Cable Lateral Raise', 'Cable Bicep Curl',
     'Back Extension', 'Overhead Tricep Extension (cable)',
     'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
@@ -33,7 +33,7 @@ WORKOUT_A_HOME_EXERCISES = [
 ]
 WORKOUT_B_GYM_EXERCISES = [
     'Romanian Deadlift', 'Upper Chest Fly (cable/pec deck)', 'Cable Row',
-    'Bulgarian Split Squat', 'Tricep Pushdown (cable)', 'Face Pull',
+    'Bulgarian Split Squat (Smith machine)', 'Tricep Pushdown (cable)', 'Face Pull',
     'EZ-Bar Curl', 'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_HOME_EXERCISES = [
@@ -53,10 +53,10 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Chest up, knees track over toes. Sit back like into a chair.", 'progression_kg': 5},
         {'name': 'Bench Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/0cXAp6WhSj4',
          'tip': "Keep shoulder blades pinned together, feet flat on the floor. Control the bar to mid-chest.", 'progression_kg': 2.5},
-        {'name': 'Pull-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/shorts/WSLbL7hqP4k',
-         'tip': "Start from a dead hang. Pull shoulder blades down first before pulling up.", 'progression_kg': 2.5},
-        {'name': 'Lateral Raise', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/Kl3LEzQ5Zqs',
-         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher.", 'progression_kg': 2.5},
+        {'name': 'Lat Pulldown', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/KlxStcwWHcM',
+         'tip': "Shoulder-width overhand grip, slight backward lean with a fixed torso — no swinging. Drive elbows down and back, lats before arms.", 'progression_kg': 2.5},
+        {'name': 'Cable Lateral Raise', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/HCfU6LGpgMk',
+         'tip': "Low pulley, stand side-on so the handle starts crossed in front of you. Lead with the elbow, raise to shoulder height only.", 'progression_kg': 2.5},
         {'name': 'Cable Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/Wm-fIUOHLy8',
          'tip': "Keep elbows pinned to your sides. No swinging.", 'progression_kg': 2.5},
         {'name': 'Back Extension', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/shorts/P489_62b8JU',
@@ -95,8 +95,8 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Slight bend in elbows, squeeze at the top, control the negative.", 'progression_kg': 2.5},
         {'name': 'Cable Row', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/8QuMq1GMMng',
          'tip': "Pull elbows back, squeeze shoulder blades together, keep torso still.", 'progression_kg': 2.5},
-        {'name': 'Bulgarian Split Squat', 'sets': 3, 'reps': '8 each leg', 'youtube': 'https://www.youtube.com/shorts/or1frhkjBDc',
-         'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
+        {'name': 'Bulgarian Split Squat (Smith machine)', 'sets': 3, 'reps': '8 each leg', 'youtube': 'https://www.youtube.com/shorts/vVfarGiW9qI',
+         'tip': "Bar across your upper back, rear foot up on a bench behind you. Front foot far enough forward that your shin stays vertical, ~80–90% of the load on the front leg.", 'progression_kg': 5},
         {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/aHfbuBf1TJk',
          'tip': "Keep elbows pinned at your sides, full extension at the bottom.", 'progression_kg': 2.5},
         {'name': 'Face Pull', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/sHSY0Ao8QHs',
