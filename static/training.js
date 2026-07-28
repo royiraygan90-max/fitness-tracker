@@ -20,13 +20,16 @@
     activeGenericCategory: null,
     warmupIdx: 0,
     warmupSecLeft: 0,
+    warmupEndsAt: null,
     exerciseIdx: 0,
     setLogs: {},
     exerciseNotesDraft: {},
     restActive: false,
     restSecLeft: 0,
+    restEndsAt: null,
     genericRunning: false,
     genericElapsed: 0,
+    genericRunningSinceMs: null,
     genericNotes: '',
     freeRunSheetOpen: false,
     freeRunSaving: false,
@@ -34,6 +37,7 @@
     runningDay: null,
     runningIdx: 0,
     runningSecLeft: 0,
+    runningEndsAt: null,
     toast: null,
     historyFilter: 'all',
     expandedHistoryId: null,
@@ -96,17 +100,42 @@
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
+  // ---------- wall-clock timers ----------
+  // Countdowns/stopwatches are driven off absolute timestamps (not a per-tick
+  // decrement), so time keeps accurately even if setInterval is throttled or
+  // paused while the phone is locked/backgrounded, and stays correct across
+  // a resumed saved session.
+  function syncRestSecLeft() {
+    if (!state.restEndsAt) return;
+    state.restSecLeft = Math.max(0, Math.round((state.restEndsAt - Date.now()) / 1000));
+  }
+  function syncWarmupSecLeft() {
+    if (!state.warmupEndsAt) return;
+    state.warmupSecLeft = Math.max(0, Math.round((state.warmupEndsAt - Date.now()) / 1000));
+  }
+  function syncRunningSecLeft() {
+    if (!state.runningEndsAt) return;
+    state.runningSecLeft = Math.max(0, Math.round((state.runningEndsAt - Date.now()) / 1000));
+  }
+  function currentGenericElapsed() {
+    if (state.genericRunning && state.genericRunningSinceMs) {
+      return state.genericElapsed + Math.floor((Date.now() - state.genericRunningSinceMs) / 1000);
+    }
+    return state.genericElapsed;
+  }
+
   // ---------- persistence ----------
   function saveSession() {
     if (!['warmup', 'live-functional', 'live-generic', 'live-running'].includes(state.screen)) return;
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       screen: state.screen, activeWorkoutKey: state.activeWorkoutKey, activeGenericCategory: state.activeGenericCategory,
-      warmupIdx: state.warmupIdx, warmupSecLeft: state.warmupSecLeft,
+      warmupIdx: state.warmupIdx, warmupSecLeft: state.warmupSecLeft, warmupEndsAt: state.warmupEndsAt,
       exerciseIdx: state.exerciseIdx, setLogs: state.setLogs, exerciseNotesDraft: state.exerciseNotesDraft,
-      restActive: state.restActive, restSecLeft: state.restSecLeft,
+      restActive: state.restActive, restSecLeft: state.restSecLeft, restEndsAt: state.restEndsAt,
       genericRunning: state.genericRunning, genericElapsed: state.genericElapsed, genericNotes: state.genericNotes,
+      genericRunningSinceMs: state.genericRunningSinceMs,
       runningWeek: state.runningWeek, runningDay: state.runningDay,
-      runningIdx: state.runningIdx, runningSecLeft: state.runningSecLeft,
+      runningIdx: state.runningIdx, runningSecLeft: state.runningSecLeft, runningEndsAt: state.runningEndsAt,
       sessionStartMs: state.sessionStartMs, sessionPRCount: state.sessionPRCount,
       savedAt: Date.now(),
     }));
@@ -305,6 +334,7 @@
     const resume = loadSavedSession();
     const resumeBanner = resume ? `<div class="tr-resume-banner">
       <span class="tr-resume-text">Unfinished ${resume.screen === 'live-generic' ? 'session' : 'workout'} in progress</span>
+      <button class="tr-resume-discard-btn" onclick="App.discardResume()">Discard</button>
       <button class="tr-resume-btn" onclick="App.resumeSaved()">Continue</button>
     </div>` : '';
     els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
@@ -745,7 +775,7 @@
       </div>
       <div class="tr-live-body">
         <div class="tr-yoga-timer-card">
-          <div class="tr-yoga-elapsed" id="generic-elapsed">${fmtTime(state.genericElapsed)}</div>
+          <div class="tr-yoga-elapsed" id="generic-elapsed">${fmtTime(currentGenericElapsed())}</div>
           <button class="tr-yoga-playpause" style="background:${color}" onclick="App.toggleGenericTimer()">
             ${state.genericRunning
               ? `<svg width="14" height="16" viewBox="0 0 14 16"><rect x="0" y="0" width="4" height="16" rx="1" fill="#0B0A0D"/><rect x="10" y="0" width="4" height="16" rx="1" fill="#0B0A0D"/></svg>`
@@ -822,6 +852,7 @@
     state.sessionPRCount = 0;
     state.warmupIdx = 0;
     state.warmupSecLeft = WARMUP_ITEMS[0].duration || 0;
+    state.warmupEndsAt = WARMUP_ITEMS[0].type === 'timed' ? Date.now() + WARMUP_ITEMS[0].duration * 1000 : null;
     state.screen = 'warmup';
     state.activeTab = null;
     saveSession();
@@ -831,6 +862,7 @@
     state.activeGenericCategory = category;
     state.genericRunning = true;
     state.genericElapsed = 0;
+    state.genericRunningSinceMs = Date.now();
     state.genericNotes = '';
     state.sessionStartMs = Date.now();
     state.screen = 'live-generic';
@@ -844,6 +876,7 @@
     state.runningDay = session.day;
     state.runningIdx = 0;
     state.runningSecLeft = session.intervals[0].duration_sec;
+    state.runningEndsAt = Date.now() + session.intervals[0].duration_sec * 1000;
     state.sessionStartMs = Date.now();
     state.screen = 'live-running';
     state.activeTab = null;
@@ -927,7 +960,6 @@
       else doStartGeneric(pending.category);
     },
     closeLive() {
-      clearSavedSession();
       state.restActive = false;
       state.genericRunning = false;
       state.screen = 'home';
@@ -937,7 +969,9 @@
     warmupNext() {
       if (state.warmupIdx < WARMUP_ITEMS.length - 1) {
         state.warmupIdx++;
-        state.warmupSecLeft = WARMUP_ITEMS[state.warmupIdx].duration || 0;
+        const item = WARMUP_ITEMS[state.warmupIdx];
+        state.warmupSecLeft = item.duration || 0;
+        state.warmupEndsAt = item.type === 'timed' ? Date.now() + item.duration * 1000 : null;
         saveSession();
         renderScreen();
       } else {
@@ -950,6 +984,7 @@
       if (state.runningIdx < session.intervals.length - 1) {
         state.runningIdx++;
         state.runningSecLeft = session.intervals[state.runningIdx].duration_sec;
+        state.runningEndsAt = Date.now() + session.intervals[state.runningIdx].duration_sec * 1000;
         saveSession();
         renderScreen();
       } else {
@@ -1018,12 +1053,13 @@
         if (D.autoRestTimer && !(allDone && isLastExercise)) {
           state.restActive = true;
           state.restSecLeft = D.restSeconds;
+          state.restEndsAt = Date.now() + D.restSeconds * 1000;
         }
       }
       saveSession();
       renderScreen();
     },
-    skipRest() { state.restActive = false; renderScreen(); },
+    skipRest() { state.restActive = false; state.restEndsAt = null; renderScreen(); },
     prevExercise() {
       state.exerciseIdx = Math.max(0, state.exerciseIdx - 1);
       state.restActive = false;
@@ -1082,14 +1118,25 @@
         renderScreen();
       });
     },
-    toggleGenericTimer() { state.genericRunning = !state.genericRunning; saveSession(); renderScreen(); },
+    toggleGenericTimer() {
+      if (state.genericRunning) {
+        state.genericElapsed = currentGenericElapsed();
+        state.genericRunning = false;
+        state.genericRunningSinceMs = null;
+      } else {
+        state.genericRunning = true;
+        state.genericRunningSinceMs = Date.now();
+      }
+      saveSession();
+      renderScreen();
+    },
     changeGenericNotes(val) { state.genericNotes = val; saveSession(); },
     finishGeneric() {
       if (state.saving) return;
       state.saving = true;
       renderScreen();
       const category = state.activeGenericCategory;
-      const durationSec = state.genericElapsed || Math.max(1, Math.round((Date.now() - state.sessionStartMs) / 1000));
+      const durationSec = currentGenericElapsed() || Math.max(1, Math.round((Date.now() - state.sessionStartMs) / 1000));
       fetch('/api/sessions/generic', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, date: D.today, durationSec, notes: state.genericNotes }),
@@ -1161,7 +1208,16 @@
       state.pendingStart = null;
       if (!s) { renderScreen(); return; }
       Object.assign(state, s);
+      syncWarmupSecLeft();
+      syncRestSecLeft();
+      syncRunningSecLeft();
+      if (state.restActive && state.restSecLeft <= 0) { state.restActive = false; state.restEndsAt = null; }
       render();
+    },
+    discardResume() {
+      if (!confirm('Discard this unfinished session? This cannot be undone.')) return;
+      clearSavedSession();
+      renderScreen();
     },
 
     calendarPrevWeek() { App.calendarGoToWeek(shiftDateStr(state.calendarWeekStart, -7)); },
@@ -1252,50 +1308,58 @@
   window.App = App;
 
   // ---------- ticking (rest timer / generic elapsed) ----------
-  function startTicker() {
-    tickTimer = setInterval(() => {
-      if (state.screen === 'warmup' && WARMUP_ITEMS[state.warmupIdx].type === 'timed') {
-        state.warmupSecLeft--;
-        if (state.warmupSecLeft <= 0) {
-          App.warmupNext();
-        } else {
-          const el = document.getElementById('warmup-count');
-          if (el) el.textContent = fmtTime(state.warmupSecLeft);
-          saveSession();
-        }
-      }
-      if (state.screen === 'live-functional' && state.restActive) {
-        state.restSecLeft--;
-        if (state.restSecLeft <= 0) {
-          state.restActive = false;
-          state.restSecLeft = 0;
-          renderScreen();
-        } else {
-          const ring = document.getElementById('rest-ring-fg');
-          const label = document.getElementById('rest-ring-label');
-          if (ring) ring.setAttribute('stroke-dashoffset', restRingOffset());
-          if (label) label.textContent = fmtTime(state.restSecLeft);
-        }
+  // All timers derive their displayed value from an absolute wall-clock
+  // timestamp each tick (see syncXSecLeft/currentGenericElapsed above), so
+  // they stay correct even if setInterval was throttled or paused entirely
+  // while the phone was locked/backgrounded — no drift, and an auto-advance
+  // (e.g. a finished rest period) fires as soon as ticking resumes.
+  function tick() {
+    if (state.screen === 'warmup' && WARMUP_ITEMS[state.warmupIdx].type === 'timed') {
+      syncWarmupSecLeft();
+      if (state.warmupSecLeft <= 0) {
+        App.warmupNext();
+      } else {
+        const el = document.getElementById('warmup-count');
+        if (el) el.textContent = fmtTime(state.warmupSecLeft);
         saveSession();
       }
-      if (state.screen === 'live-generic' && state.genericRunning) {
-        state.genericElapsed++;
-        const el = document.getElementById('generic-elapsed');
-        if (el) el.textContent = fmtTime(state.genericElapsed);
+    }
+    if (state.screen === 'live-functional' && state.restActive) {
+      syncRestSecLeft();
+      if (state.restSecLeft <= 0) {
+        state.restActive = false;
+        state.restEndsAt = null;
+        renderScreen();
+      } else {
+        const ring = document.getElementById('rest-ring-fg');
+        const label = document.getElementById('rest-ring-label');
+        if (ring) ring.setAttribute('stroke-dashoffset', restRingOffset());
+        if (label) label.textContent = fmtTime(state.restSecLeft);
+      }
+      saveSession();
+    }
+    if (state.screen === 'live-generic' && state.genericRunning) {
+      const el = document.getElementById('generic-elapsed');
+      if (el) el.textContent = fmtTime(currentGenericElapsed());
+      saveSession();
+    }
+    if (state.screen === 'live-running') {
+      syncRunningSecLeft();
+      if (state.runningSecLeft <= 0) {
+        App.runningAdvance();
+      } else {
+        const el = document.getElementById('running-count');
+        if (el) el.textContent = fmtTime(state.runningSecLeft);
         saveSession();
       }
-      if (state.screen === 'live-running') {
-        state.runningSecLeft--;
-        if (state.runningSecLeft <= 0) {
-          App.runningAdvance();
-        } else {
-          const el = document.getElementById('running-count');
-          if (el) el.textContent = fmtTime(state.runningSecLeft);
-          saveSession();
-        }
-      }
-    }, 1000);
+    }
   }
+  function startTicker() {
+    tickTimer = setInterval(tick, 1000);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { tick(); renderScreen(); }
+  });
 
   render();
   startTicker();

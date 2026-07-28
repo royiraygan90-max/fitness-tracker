@@ -285,6 +285,7 @@ button { font-family: inherit; }
 .tr-resume-banner { border-radius: 16px; background: rgba(232,184,75,.1); border: 1px solid rgba(232,184,75,.3); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
 .tr-resume-text { flex: 1; font-size: 12.5px; color: rgba(245,243,239,.8); }
 .tr-resume-btn { height: 34px; padding: 0 14px; border-radius: 9px; border: none; background: var(--gold); color: var(--ink); font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+.tr-resume-discard-btn { height: 34px; padding: 0 10px; border-radius: 9px; border: none; background: none; color: rgba(245,243,239,.4); font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
 
 .tr-empty { font-size: 13px; color: rgba(245,243,239,.4); text-align: center; padding: 20px 0; }
 
