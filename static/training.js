@@ -28,7 +28,6 @@
     genericRunning: false,
     genericElapsed: 0,
     genericNotes: '',
-    homeTrainTab: 'yoga',
     freeRunSheetOpen: false,
     freeRunSaving: false,
     runningWeek: null,
@@ -183,6 +182,7 @@
   function iconHome(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 11L12 4L20 11V20H14V14H10V20H4V11Z" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/></svg>`; }
   function iconHistory(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="${c}" stroke-width="1.8"/><path d="M12 7.5V12L15.5 14.5" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconCoach(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 17L10 11L14 15L20 7" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5 7H20V12.5" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+  function iconRunning(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="15" cy="4.5" r="2" fill="${c}"/><path d="M10.5 9L7 12.5L10 14.5L8.5 19.5M10 14.5L14 16L16.5 19.5M7 12.5L4 15" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconChevron(c) { return `<svg width="7" height="12" viewBox="0 0 7 12"><path d="M1 1L6 6L1 11" stroke="${c || 'rgba(245,243,239,.3)'}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconClose() { return `<svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1L13 13M13 1L1 13" stroke="rgba(245,243,239,.8)" stroke-width="1.7" stroke-linecap="round"/></svg>`; }
   function iconPlayBig(fill) { return `<svg width="16" height="18" viewBox="0 0 16 18"><path d="M0 0L16 9L0 18V0Z" fill="${fill || '#0B0A0D'}"/></svg>`; }
@@ -190,10 +190,10 @@
 
   // ---------- tab bar ----------
   function renderTabBar() {
-    const show = ['home', 'coach', 'history'].includes(state.screen);
+    const show = ['home', 'coach', 'running', 'history'].includes(state.screen);
     if (!show) { els.tabBar.innerHTML = ''; els.tabBar.style.display = 'none'; return; }
     els.tabBar.style.display = 'flex';
-    const tabs = [['home', 'Home', iconHome], ['coach', 'Coach', iconCoach], ['history', 'History', iconHistory]];
+    const tabs = [['home', 'Home', iconHome], ['coach', 'Coach', iconCoach], ['running', 'Running', iconRunning], ['history', 'History', iconHistory]];
     els.tabBar.innerHTML = tabs.map(([key, label, icon]) => {
       const active = state.activeTab === key;
       const color = active ? '#F5F3EF' : 'rgba(245,243,239,.35)';
@@ -295,35 +295,9 @@
       </div>`;
   }
 
-  function renderRunningCardBody() {
-    const s = D.runningNextSession;
-    const runSec = s.intervals.filter(i => i.type === 'run').reduce((a, i) => a + i.duration_sec, 0);
-    const totalMin = Math.round(s.totalDurationSec / 60);
-    const runMin = Math.round(runSec / 60);
-    return `<div class="tr-chart-head">
-        <div class="tr-chart-title">Running</div>
-        <div class="tr-chart-sub">${s.graduated ? 'Program complete' : `Week ${s.week} of ${s.totalWeeks}`}</div>
-      </div>
-      <div class="tr-yoga-routine-title">${s.graduated ? 'Maintenance run' : `Day ${s.day} of 3`}</div>
-      <div class="tr-chart-sub" style="margin-top:4px">${totalMin} min total, ${runMin} min running</div>
-      <div class="tr-yoga-actions">
-        <button class="tr-yoga-done-btn" style="flex:none;width:100%;background:${COLORS.running}" onclick="App.startRunning()">Start Run</button>
-      </div>
-      <button class="tr-link-btn" style="display:block;margin-top:10px;color:${COLORS.running}" onclick="App.openRunningHub()">Full running page, stats &amp; free runs →</button>`;
-  }
-
-  function renderTrainCard() {
-    const tab = state.homeTrainTab;
-    const tabBtn = (key, label) => {
-      const active = tab === key;
-      return `<button class="tr-filter-btn" style="border:1px solid ${active ? 'rgba(255,255,255,.2)' : 'rgba(255,255,255,.08)'};background:${active ? 'rgba(255,255,255,.1)' : 'transparent'};color:${active ? '#F5F3EF' : 'rgba(245,243,239,.45)'}" onclick="App.setHomeTrainTab('${key}')">${label}</button>`;
-    };
+  function renderYogaCard() {
     return `<div class="tr-chart-card">
-      <div class="tr-filter-row" style="margin-bottom:14px">
-        ${tabBtn('yoga', 'Yoga')}
-        ${tabBtn('running', 'Running')}
-      </div>
-      ${tab === 'running' ? renderRunningCardBody() : renderYogaCardBody()}
+      ${renderYogaCardBody()}
     </div>`;
   }
 
@@ -356,7 +330,7 @@
         <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.quickLogPoci()">Log Poci</button>
       </div>
 
-      ${renderTrainCard()}
+      ${renderYogaCard()}
 
       <div class="tr-stat-row">
         <div class="tr-stat-card"><div class="tr-stat-value">${D.weekCount}</div><div class="tr-stat-label">sessions this week</div></div>
@@ -501,19 +475,11 @@
     const sessionsDone = s.graduated ? totalSessions : (s.week - 1) * 3 + (s.day - 1);
     const recentRuns = D.history.filter(h => h.category === 'running').slice(0, 5);
 
-    els.root.innerHTML = `<div class="tr-live-header">
-        <div class="tr-live-topbar">
-          <button class="tr-icon-btn" onclick="App.closeRunningHub()">${iconClose()}</button>
-          <div class="tr-live-title-block">
-            <div class="tr-live-title">Running</div>
-            <div class="tr-live-sub">${s.graduated ? 'Program complete' : `${sessionsDone} of ${totalSessions} sessions`}</div>
-          </div>
-          <div style="width:34px"></div>
-        </div>
-      </div>
-      <div class="tr-screen"><div class="tr-screen-pad" style="padding-top:16px">
+    els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
+        <div class="tr-greeting" style="margin-top:0">Running</div>
+        <div class="tr-chart-sub" style="margin-top:2px">${s.graduated ? 'Program complete' : `${sessionsDone} of ${totalSessions} sessions`}</div>
 
-        <div class="tr-chart-card">
+        <div class="tr-chart-card" style="margin-top:18px">
           <div class="tr-chart-head">
             <div class="tr-chart-title">${s.graduated ? 'Maintenance run' : `Week ${s.week} of ${s.totalWeeks}`}</div>
             <div class="tr-chart-sub">${s.graduated ? '' : `Day ${s.day} of 3`}</div>
@@ -563,7 +529,7 @@
   }
 
   function renderFreeRunSheet() {
-    if (!state.freeRunSheetOpen) { els.sheetRoot.innerHTML = ''; return; }
+    if (!state.freeRunSheetOpen || state.screen !== 'running') { els.sheetRoot.innerHTML = ''; return; }
     els.sheetRoot.innerHTML = `<div class="tr-sheet-backdrop" onclick="App.closeFreeRunSheet()">
       <div class="tr-sheet" onclick="event.stopPropagation()">
         <div class="tr-sheet-title">Log a free run</div>
@@ -828,7 +794,7 @@
     else if (state.screen === 'live-functional') renderLiveFunctional();
     else if (state.screen === 'live-generic') renderLiveGeneric();
     else if (state.screen === 'live-running') renderLiveRunning();
-    else if (state.screen === 'running-hub') renderRunningHub();
+    else if (state.screen === 'running') renderRunningHub();
     else if (state.screen === 'complete') renderComplete();
   }
   function render() {
@@ -1152,9 +1118,6 @@
         .catch(() => showToast('Could not delete — try again', 'neutral'));
     },
     setHistoryFilter(f) { state.historyFilter = f; renderScreen(); },
-    setHomeTrainTab(t) { state.homeTrainTab = t; renderScreen(); },
-    openRunningHub() { state.screen = 'running-hub'; state.activeTab = null; render(); },
-    closeRunningHub() { state.screen = 'home'; state.activeTab = 'home'; render(); },
     viewRunningHistory() { state.historyFilter = 'running'; App.goTab('history'); },
     openFreeRunSheet() { state.freeRunSheetOpen = true; render(); },
     closeFreeRunSheet() { state.freeRunSheetOpen = false; render(); },
