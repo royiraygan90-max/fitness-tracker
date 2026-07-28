@@ -239,6 +239,85 @@ def test_save_generic_session_invalid_category(client):
     assert r.status_code == 400
 
 
+# ---------- clientToken dedup (retry-after-dropped-response protection) ----------
+
+def test_functional_session_retry_with_same_token_not_duplicated(client):
+    import json
+    payload = {
+        'workoutKey': 'workout_a_gym', 'clientToken': 'tok-func-1',
+        'exercises': [{'id': 'workout_a_gym_0', 'name': 'Squat', 'sets': [{'weight': 20, 'reps': 10}]}],
+    }
+    r1 = client.post('/api/sessions/functional', data=json.dumps(payload), content_type='application/json')
+    r2 = client.post('/api/sessions/functional', data=json.dumps(payload), content_type='application/json')
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert json.loads(r1.data)['success'] is True
+    assert json.loads(r2.data)['success'] is True
+
+    db = flask_app.get_db()
+    assert db.execute("SELECT COUNT(*) c FROM sessions WHERE client_token='tok-func-1'").fetchone()['c'] == 1
+    assert db.execute("SELECT COUNT(*) c FROM session_sets").fetchone()['c'] == 1
+
+
+def test_generic_session_retry_with_same_token_not_duplicated(client):
+    import json
+    payload = {'category': 'yoga', 'durationSec': 900, 'clientToken': 'tok-generic-1'}
+    client.post('/api/sessions/generic', data=json.dumps(payload), content_type='application/json')
+    client.post('/api/sessions/generic', data=json.dumps(payload), content_type='application/json')
+
+    db = flask_app.get_db()
+    assert db.execute("SELECT COUNT(*) c FROM sessions WHERE client_token='tok-generic-1'").fetchone()['c'] == 1
+
+
+def test_running_session_retry_with_same_token_does_not_advance_progress_twice(client):
+    import json
+    payload = {'week': 1, 'day': 1, 'clientToken': 'tok-run-1'}
+    r1 = client.post('/api/sessions/running', data=json.dumps(payload), content_type='application/json')
+    r2 = client.post('/api/sessions/running', data=json.dumps(payload), content_type='application/json')
+    data1 = json.loads(r1.data)['runningNextSession']
+    data2 = json.loads(r2.data)['runningNextSession']
+    # A single real completion should advance week/day exactly once, not twice.
+    assert data1['week'] == 1 and data1['day'] == 2
+    assert data2['week'] == 1 and data2['day'] == 2
+
+    db = flask_app.get_db()
+    assert db.execute("SELECT COUNT(*) c FROM sessions WHERE client_token='tok-run-1'").fetchone()['c'] == 1
+
+
+def test_free_run_retry_with_same_token_not_duplicated(client):
+    import json
+    payload = {'distanceKm': 5.2, 'durationSec': 1800, 'clientToken': 'tok-freerun-1'}
+    r1 = client.post('/api/sessions/running/free', data=json.dumps(payload), content_type='application/json')
+    r2 = client.post('/api/sessions/running/free', data=json.dumps(payload), content_type='application/json')
+    assert json.loads(r1.data)['runningStats']['totalDistanceKm'] == json.loads(r2.data)['runningStats']['totalDistanceKm']
+
+    db = flask_app.get_db()
+    assert db.execute("SELECT COUNT(*) c FROM sessions WHERE client_token='tok-freerun-1'").fetchone()['c'] == 1
+
+
+def test_different_tokens_both_saved(client):
+    import json
+    payload1 = {'category': 'poci', 'durationSec': 600, 'clientToken': 'tok-a'}
+    payload2 = {'category': 'poci', 'durationSec': 600, 'clientToken': 'tok-b'}
+    client.post('/api/sessions/generic', data=json.dumps(payload1), content_type='application/json')
+    client.post('/api/sessions/generic', data=json.dumps(payload2), content_type='application/json')
+
+    db = flask_app.get_db()
+    assert db.execute("SELECT COUNT(*) c FROM sessions WHERE session_type='poci'").fetchone()['c'] == 2
+
+
+def test_missing_client_token_still_saves_normally(client):
+    import json
+    payload = {'category': 'poci', 'durationSec': 600}
+    r1 = client.post('/api/sessions/generic', data=json.dumps(payload), content_type='application/json')
+    r2 = client.post('/api/sessions/generic', data=json.dumps(payload), content_type='application/json')
+    assert r1.status_code == 200 and r2.status_code == 200
+
+    db = flask_app.get_db()
+    # No token on either request means no dedup — both legitimately save,
+    # same as two separate real Poci logs would.
+    assert db.execute("SELECT COUNT(*) c FROM sessions WHERE session_type='poci'").fetchone()['c'] == 2
+
+
 def test_log_live_with_weights(client):
     import json
     payload = {
