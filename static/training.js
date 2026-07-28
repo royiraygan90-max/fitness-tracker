@@ -221,6 +221,7 @@
   function iconHistory(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="${c}" stroke-width="1.8"/><path d="M12 7.5V12L15.5 14.5" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconCoach(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 17L10 11L14 15L20 7" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5 7H20V12.5" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconRunning(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="15" cy="4.5" r="2" fill="${c}"/><path d="M10.5 9L7 12.5L10 14.5L8.5 19.5M10 14.5L14 16L16.5 19.5M7 12.5L4 15" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+  function iconYoga(c) { return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill="${c}"/><path d="M12 7V11" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/><path d="M12 9L7 12.5M12 9L17 12.5" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18L12 11L19 18" stroke="${c}" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconChevron(c) { return `<svg width="7" height="12" viewBox="0 0 7 12"><path d="M1 1L6 6L1 11" stroke="${c || 'rgba(245,243,239,.3)'}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
   function iconClose() { return `<svg width="13" height="13" viewBox="0 0 14 14"><path d="M1 1L13 13M13 1L1 13" stroke="rgba(245,243,239,.8)" stroke-width="1.7" stroke-linecap="round"/></svg>`; }
   function iconPlayBig(fill) { return `<svg width="16" height="18" viewBox="0 0 16 18"><path d="M0 0L16 9L0 18V0Z" fill="${fill || '#0B0A0D'}"/></svg>`; }
@@ -228,10 +229,10 @@
 
   // ---------- tab bar ----------
   function renderTabBar() {
-    const show = ['home', 'coach', 'running', 'history'].includes(state.screen);
+    const show = ['home', 'coach', 'running', 'yoga', 'history'].includes(state.screen);
     if (!show) { els.tabBar.innerHTML = ''; els.tabBar.style.display = 'none'; return; }
     els.tabBar.style.display = 'flex';
-    const tabs = [['home', 'Home', iconHome], ['coach', 'Coach', iconCoach], ['running', 'Running', iconRunning], ['history', 'History', iconHistory]];
+    const tabs = [['home', 'Home', iconHome], ['coach', 'Coach', iconCoach], ['running', 'Running', iconRunning], ['yoga', 'Yoga', iconYoga], ['history', 'History', iconHistory]];
     els.tabBar.innerHTML = tabs.map(([key, label, icon]) => {
       const active = state.activeTab === key;
       const color = active ? '#F5F3EF' : 'rgba(245,243,239,.35)';
@@ -323,7 +324,7 @@
   function renderYogaCardBody() {
     const routine = D.yogaNextRoutine;
     return `<div class="tr-chart-head">
-        <div class="tr-chart-title">Yoga &amp; Mobility</div>
+        <div class="tr-chart-title">Next Up</div>
         <div class="tr-chart-sub">${esc(routine.focus)}</div>
       </div>
       <div class="tr-yoga-routine-title">${esc(routine.title)}</div>
@@ -333,10 +334,36 @@
       </div>`;
   }
 
-  function renderYogaCard() {
-    return `<div class="tr-chart-card">
-      ${renderYogaCardBody()}
-    </div>`;
+  // ---------- Yoga Hub ----------
+  function renderYogaHub() {
+    const recentYoga = D.history.filter(h => h.category === 'yoga').slice(0, 5);
+    els.root.innerHTML = `<div class="tr-screen"><div class="tr-screen-pad">
+        <div class="tr-greeting" style="margin-top:0">Yoga &amp; Mobility</div>
+
+        <div class="tr-chart-card" style="margin-top:18px">
+          ${renderYogaCardBody()}
+        </div>
+
+        <div class="tr-quick-row" style="margin-top:14px">
+          <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.quickLogWrist()">Wrist Care</button>
+          <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.quickLogTennisElbow()">Tennis Elbow</button>
+        </div>
+
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:20px">
+          <div class="tr-card-eyebrow" style="color:rgba(245,243,239,.4)">RECENT SESSIONS</div>
+          ${recentYoga.length ? `<button class="tr-link-btn" style="color:${COLORS.yoga}" onclick="App.viewYogaHistory()">View all</button>` : ''}
+        </div>
+        ${recentYoga.length ? recentYoga.map(r => `
+          <div class="tr-last-session" onclick="App.viewYogaHistory()">
+            <div class="tr-dot" style="background:${r.accent}"></div>
+            <div style="flex:1">
+              <div class="tr-last-session-label">${esc(r.dateLabel)}</div>
+              <div class="tr-last-session-title">${esc(r.title)}</div>
+              <div class="tr-last-session-meta">${esc(lastSessionMetaLine(r))}</div>
+            </div>
+          </div>`).join('') : '<div class="tr-empty">No yoga sessions logged yet.</div>'}
+
+      </div></div>`;
   }
 
   function renderHome() {
@@ -364,12 +391,8 @@
       </div>
 
       <div class="tr-quick-row">
-        <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.quickLogWrist()">Wrist Care</button>
-        <button class="tr-quick-btn" style="border-color:${COLORS.yoga};color:${COLORS.yoga}" onclick="App.quickLogTennisElbow()">Tennis Elbow</button>
         <button class="tr-quick-btn" style="border-color:${COLORS.poci};color:${COLORS.poci}" onclick="App.quickLogPoci()">Log Poci</button>
       </div>
-
-      ${renderYogaCard()}
 
       <div class="tr-stat-row">
         <div class="tr-stat-card"><div class="tr-stat-value">${D.weekCount}</div><div class="tr-stat-label">sessions this week</div></div>
@@ -834,6 +857,7 @@
     else if (state.screen === 'live-generic') renderLiveGeneric();
     else if (state.screen === 'live-running') renderLiveRunning();
     else if (state.screen === 'running') renderRunningHub();
+    else if (state.screen === 'yoga') renderYogaHub();
     else if (state.screen === 'complete') renderComplete();
   }
   function render() {
@@ -1178,6 +1202,7 @@
     },
     setHistoryFilter(f) { state.historyFilter = f; renderScreen(); },
     viewRunningHistory() { state.historyFilter = 'running'; App.goTab('history'); },
+    viewYogaHistory() { state.historyFilter = 'yoga'; App.goTab('history'); },
     openFreeRunSheet() { state.freeRunSheetOpen = true; state.freeRunToken = genClientToken(); render(); },
     closeFreeRunSheet() { state.freeRunSheetOpen = false; render(); },
     submitFreeRun() {
