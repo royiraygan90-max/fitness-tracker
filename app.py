@@ -27,9 +27,9 @@ WORKOUT_A_GYM_EXERCISES = [
     'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_A_HOME_EXERCISES = [
-    'Goblet Squat (dumbbell)', 'Parallette Dips', 'Chin-up', 'Lateral Raise (dumbbell)',
-    'Dumbbell Bicep Curl', 'Lower Back (Superman)', 'Overhead Tricep Extension (dumbbell)',
-    'Calf Raise (dumbbell)', 'Core Finisher (your choice)'
+    'Goblet Squat (dumbbell)', 'Decline Push-up', 'Chin-up', 'Incline Y-Raise (dumbbell)',
+    'Dumbbell Bicep Curl', 'Lower Back (Superman)', 'Dumbbell Skull Crusher',
+    'Step-Edge Calf Raise (dumbbell)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_GYM_EXERCISES = [
     'Romanian Deadlift', 'Upper Chest Fly (cable/pec deck)', 'Cable Row',
@@ -37,8 +37,8 @@ WORKOUT_B_GYM_EXERCISES = [
     'EZ-Bar Curl', 'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_HOME_EXERCISES = [
-    'Romanian Deadlift (dumbbell)', 'Incline Dumbbell Press', 'Bent-over Dumbbell Row',
-    'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Reverse Fly (dumbbell)',
+    'Romanian Deadlift (dumbbell)', 'Incline Dumbbell Press', 'Chest-Supported Row (dumbbell)',
+    'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Prone Incline Reverse Fly (dumbbell)',
     'Dumbbell Hammer Curl', 'Calf Raise (dumbbell)', 'Core Finisher (your choice)'
 ]
 
@@ -71,20 +71,20 @@ LIVE_WORKOUT_EXERCISES = {
     'workout_a_home': [
         {'name': 'Goblet Squat (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/wjkoL-CagYE',
          'tip': "Hold the dumbbell at chest height, sit back and down keeping your chest tall.", 'progression_kg': 5},
-        {'name': 'Parallette Dips', 'sets': 3, 'reps': 'to failure / 10', 'youtube': 'https://www.youtube.com/shorts/BxVoVcDD038',
-         'tip': "Lean slightly forward for chest emphasis. Control the descent, don't flare elbows too wide.", 'progression_kg': 2.5},
+        {'name': 'Decline Push-up', 'sets': 3, 'reps': 'to failure / 10', 'youtube': 'https://www.youtube.com/shorts/7a0sQBLvPT0',
+         'tip': "Feet elevated on a bench or chair, hands slightly wider than shoulders. Keep a straight line from ankles to head — don't sag your hips for extra depth.", 'progression_kg': 2.5},
         {'name': 'Chin-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/shorts/QfQmbn4QoEA',
          'tip': "Underhand, shoulder-width grip. Pull your chest toward the bar, control the descent.", 'progression_kg': 2.5},
-        {'name': 'Lateral Raise (dumbbell)', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/Kl3LEzQ5Zqs',
-         'tip': "Slight bend in elbow. Raise to shoulder height only — no higher.", 'progression_kg': 2.5},
+        {'name': 'Incline Y-Raise (dumbbell)', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/BVHOIJeY884',
+         'tip': "Bench at 30–45°, lie face-down. Raise the dumbbells diagonally overhead in a Y shape, thumbs leading — light weight, no momentum.", 'progression_kg': 2.5},
         {'name': 'Dumbbell Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/YgHnvJQkfhc',
          'tip': "Keep elbows pinned to your sides. Control the negative.", 'progression_kg': 2.5},
         {'name': 'Lower Back (Superman)', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/shorts/J0JkfaQaNiI',
          'tip': "Lift chest and legs together, squeeze glutes. Don't hyperextend the neck.", 'progression_kg': 2.5},
-        {'name': 'Overhead Tricep Extension (dumbbell)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/J565P8FzJXA',
-         'tip': "Hold one dumbbell with both hands, elbows in, lower behind your head under control.", 'progression_kg': 2.5},
-        {'name': 'Calf Raise (dumbbell)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/8sT7Ne3Kzwc',
-         'tip': "Balls of your feet on a step, full stretch at the bottom, squeeze at the top.", 'progression_kg': 2.5},
+        {'name': 'Dumbbell Skull Crusher', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/WLQizQXoeIg',
+         'tip': "Elbows pointed at the ceiling and fixed — only your forearms move. Lower to your forehead, then extend back up without flaring your elbows.", 'progression_kg': 2.5},
+        {'name': 'Step-Edge Calf Raise (dumbbell)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/C8gR_i25oI0',
+         'tip': "Balls of your feet on a step, heels hanging off. Drop your heels for a full stretch at the bottom, then rise all the way up and squeeze.", 'progression_kg': 2.5},
         {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
          'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
@@ -113,14 +113,14 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Hinge at the hips, push hips back. Keep the dumbbells close to your legs.", 'progression_kg': 5},
         {'name': 'Incline Dumbbell Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/8fXfwG4ftaQ',
          'tip': "Bench at ~30°. Press up and slightly inward, don't flare your elbows too wide.", 'progression_kg': 2.5},
-        {'name': 'Bent-over Dumbbell Row', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/-WmpQeHtIbo',
-         'tip': "Flat back, pull elbow back and up, squeeze at the top.", 'progression_kg': 2.5},
+        {'name': 'Chest-Supported Row (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/vjmVM181ATg',
+         'tip': "Bench at 30–45°, chest pressed into the pad the whole set — no swinging. Drive elbows back toward your hips, squeeze your shoulder blades together.", 'progression_kg': 2.5},
         {'name': 'Bulgarian Split Squat (dumbbell)', 'sets': 3, 'reps': '8 each leg', 'youtube': 'https://www.youtube.com/shorts/or1frhkjBDc',
          'tip': "Front foot far enough forward. Torso upright, control the descent.", 'progression_kg': 5},
         {'name': 'Tricep Kickback (dumbbell)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/qgJlAKYUkYg',
          'tip': "Keep your upper arm still, extend through the elbow only.", 'progression_kg': 2.5},
-        {'name': 'Reverse Fly (dumbbell)', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/JeSlI2s4XfM',
-         'tip': "Hinge forward, soft bend in the elbows. Raise the dumbbells out to the sides, squeezing your shoulder blades together.", 'progression_kg': 2.5},
+        {'name': 'Prone Incline Reverse Fly (dumbbell)', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/Y2BOqe3W_4I',
+         'tip': "Same incline bench as the Y-Raise, but arms sweep straight out to the sides like a T, not overhead. Slight fixed bend in the elbows, squeeze your rear delts at the top.", 'progression_kg': 2.5},
         {'name': 'Dumbbell Hammer Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/K9LiwcGuqA0',
          'tip': "Neutral grip (palms facing in) the whole way. No swinging.", 'progression_kg': 2.5},
         {'name': 'Calf Raise (dumbbell)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/8sT7Ne3Kzwc',
