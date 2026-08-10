@@ -621,6 +621,20 @@ def _format_legacy_exercise_line(name, sets, reps, weight_kg):
     return reps or ((str(sets) + ' sets') if sets else '—')
 
 
+def _workout_letter(key):
+    """'A' or 'B' for any workout_a*/workout_b* key (new-style gym/home
+    variants and legacy 2-type keys alike), else None — lets the calendar
+    show which of the two you last did instead of an ambiguous same-color
+    dot for both."""
+    if not key:
+        return None
+    if key.startswith('workout_a'):
+        return 'A'
+    if key.startswith('workout_b'):
+        return 'B'
+    return None
+
+
 def _query_history(db, today, limit=None):
     items = []
     for r in db.execute(
@@ -640,6 +654,7 @@ def _query_history(db, today, limit=None):
             items.append({
                 'id': 's' + str(r['id']), 'category': 'functional', 'legacy': False, 'accent': FUNCTIONAL_COLOR,
                 'title': w['label'] if w else (r['workout_key'] or 'Workout'),
+                'letter': _workout_letter(r['workout_key']),
                 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
                 'durationMin': max(1, round(r['duration_sec'] / 60)), 'prCount': r['pr_count'] or 0,
                 'exercises': [{'name': v['name'], 'sets': ', '.join(v['sets'])} for v in by_ex.values()],
@@ -701,7 +716,8 @@ def _query_history(db, today, limit=None):
                     exercises.append({'name': parts[0], 'sets': _format_legacy_exercise_line(parts[0], sets, reps, weight_kg)})
         items.append({
             'id': 'w' + str(r['id']), 'category': category, 'legacy': True, 'accent': accent,
-            'title': title, 'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
+            'title': title, 'letter': _workout_letter(r['type']),
+            'date': str(d), 'dateLabel': _fmt_rel_date(d, today), 'daysAgo': (today - d).days,
             'durationMin': None, 'prCount': 0, 'exercises': exercises, 'notes': r['notes'] or '', 'focusTags': [],
         })
 
@@ -877,10 +893,10 @@ def _build_calendar_week(db, today, start):
         h = by_date.get(ds)
         plan_key = plans.get(ds)
         if h:
-            entry.update(status='done', title=h['title'], accent=h['accent'], category=h['category'], prCount=h['prCount'])
+            entry.update(status='done', title=h['title'], accent=h['accent'], category=h['category'], prCount=h['prCount'], letter=h.get('letter'))
         elif plan_key and plan_key in PLAN_META:
             accent, label, category = PLAN_META[plan_key]
-            entry.update(status='planned', workoutKey=plan_key, title=label, accent=accent, category=category)
+            entry.update(status='planned', workoutKey=plan_key, title=label, accent=accent, category=category, letter=_workout_letter(plan_key))
         else:
             entry.update(status='empty')
         days.append(entry)

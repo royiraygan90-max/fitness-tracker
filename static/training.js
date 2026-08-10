@@ -173,23 +173,26 @@
     els.toastRoot.innerHTML = `<div class="tr-toast"><div class="tr-dot" style="background:${dot}"></div><span class="tr-toast-text">${esc(state.toast.msg)}</span></div>`;
   }
 
-  // ---------- plan sheet (tap a calendar day to plan/clear a workout) ----------
+  // ---------- plan sheet (tap a calendar day to plan a future workout, or
+  // log a past one you forgot to record at the time) ----------
   function renderPlanSheet() {
     if (!state.planSheetDate || state.screen !== 'home') { els.sheetRoot.innerHTML = ''; return; }
     const day = state.calendarDays.find(d => d.date === state.planSheetDate);
+    const isPast = state.planSheetDate < D.today;
     const dateLabel = new Date(state.planSheetDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
     els.sheetRoot.innerHTML = `<div class="tr-sheet-backdrop" onclick="App.closePlanSheet()">
       <div class="tr-sheet" onclick="event.stopPropagation()">
-        <div class="tr-sheet-title">Plan a workout</div>
-        <div class="tr-sheet-sub">${esc(dateLabel)}</div>
+        <div class="tr-sheet-title">${isPast ? 'Log a session' : 'Plan a workout'}</div>
+        <div class="tr-sheet-sub">${isPast ? 'What did you actually do — ' + esc(dateLabel) + '?' : esc(dateLabel)}</div>
         <div class="tr-sheet-options">
           ${PLAN_OPTIONS.map(([key, label]) => {
             const color = planOptionColor(key);
-            const active = day && day.workoutKey === key;
-            return `<button class="tr-sheet-opt${active ? ' tr-sheet-opt-active' : ''}" style="border-color:${color};${active ? `background:${color}22;` : ''}" onclick="App.setPlan('${key}')">${label}</button>`;
+            const active = !isPast && day && day.workoutKey === key;
+            const action = isPast ? 'logPastSession' : 'setPlan';
+            return `<button class="tr-sheet-opt${active ? ' tr-sheet-opt-active' : ''}" style="border-color:${color};${active ? `background:${color}22;` : ''}" onclick="App.${action}('${key}')">${label}</button>`;
           }).join('')}
         </div>
-        ${day && day.status === 'planned' ? `<button class="tr-sheet-clear" onclick="App.clearPlan()">Clear plan</button>` : ''}
+        ${!isPast && day && day.status === 'planned' ? `<button class="tr-sheet-clear" onclick="App.clearPlan()">Clear plan</button>` : ''}
         <button class="tr-sheet-cancel" onclick="App.closePlanSheet()">Cancel</button>
       </div>
     </div>`;
@@ -268,16 +271,26 @@
   }
 
   function calendarDayCell(day) {
-    const tappable = day.status !== 'done' && (day.isToday || day.isFuture);
-    let dotStyle;
-    if (day.status === 'done') dotStyle = `background:${day.accent}`;
-    else if (day.status === 'planned') dotStyle = `background:transparent;border:1.5px solid ${day.accent}`;
-    else dotStyle = 'background:transparent';
+    const tappable = day.status !== 'done';
+    let marker;
+    if (day.letter) {
+      // Workout A/B share one accent color, so a plain dot can't tell them
+      // apart at a glance — show the letter itself instead.
+      const style = day.status === 'done'
+        ? `background:${day.accent};color:#0B0A0D`
+        : `background:transparent;border:1.5px solid ${day.accent};color:${day.accent}`;
+      marker = `<div class="tr-cal-letter" style="${style}">${day.letter}</div>`;
+    } else {
+      const dotStyle = day.status === 'done' ? `background:${day.accent}`
+        : day.status === 'planned' ? `background:transparent;border:1.5px solid ${day.accent}`
+        : 'background:transparent';
+      marker = `<div class="tr-cal-dot" style="${dotStyle}"></div>`;
+    }
     return `<div class="tr-cal-day${day.isToday ? ' tr-cal-day-today' : ''}${tappable ? ' tr-cal-day-tappable' : ''}"
         ${tappable ? `onclick="App.openPlanSheet('${day.date}')"` : ''}>
       <div class="tr-cal-day-label">${esc(day.dayLabel)}</div>
       <div class="tr-cal-day-num">${day.dayNum}</div>
-      <div class="tr-cal-dot" style="${dotStyle}"></div>
+      ${marker}
     </div>`;
   }
 
@@ -1340,6 +1353,25 @@
         body: JSON.stringify({ date: dateStr, workoutKey: null }),
       }).then(r => r.json()).then(() => App.refreshCalendarWeek())
         .catch(() => showToast('Could not clear plan — try again', 'neutral'));
+    },
+    logPastSession(workoutKey) {
+      const dateStr = state.planSheetDate;
+      if (!dateStr) return;
+      state.planSheetDate = null;
+      renderPlanSheet();
+      const isGeneric = workoutKey === 'yoga' || workoutKey === 'poci';
+      const url = isGeneric ? '/api/sessions/generic' : '/api/sessions/functional';
+      const body = isGeneric
+        ? { category: workoutKey, date: dateStr, durationSec: workoutKey === 'yoga' ? 900 : 60 }
+        : { workoutKey, date: dateStr, durationSec: 1800, exercises: [], notes: {} };
+      fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(r => r.json()).then(res => {
+        if (!res.success) { showToast('Could not log — try again', 'neutral'); return; }
+        showToast('Session logged', 'gold');
+        App.refreshCalendarWeek();
+      }).catch(() => showToast('Could not log — try again', 'neutral'));
     },
     refreshCalendarWeek() {
       fetch('/api/calendar?start=' + encodeURIComponent(state.calendarWeekStart))
