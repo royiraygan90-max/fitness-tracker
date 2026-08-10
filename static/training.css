@@ -102,6 +102,7 @@ button { font-family: inherit; }
 .tr-cal-day-label { font-size: 9px; font-weight: 700; letter-spacing: .04em; color: rgba(245,243,239,.4); }
 .tr-cal-day-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
 .tr-cal-dot { width: 6px; height: 6px; border-radius: 50%; }
+.tr-cal-letter { width: 15px; height: 15px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-size: 9.5px; font-weight: 800; line-height: 1; }
 
 /* ===== Workout A/B gym-or-home picker ===== */
 .tr-ab-row { display: flex; gap: 10px; }
