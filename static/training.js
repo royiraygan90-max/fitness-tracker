@@ -687,62 +687,83 @@
   }
 
   // ---------- Live functional (Workout A/B, gym/home) ----------
+  function currentStep() {
+    const workout = D.abWorkouts[state.activeWorkoutKey];
+    const indices = workout.supersetSteps[state.exerciseIdx];
+    return indices.map(i => workout.exercises[i]);
+  }
+  function exerciseBlock(ex, label) {
+    const sets = state.setLogs[ex.id];
+    return `<div class="tr-card">
+        ${label ? `<div class="tr-superset-label">${label}</div>` : ''}
+        <div class="tr-ex-name">${esc(ex.name)}</div>
+        <div class="tr-ex-target">${ex.target_sets} sets × ${esc(ex.target_reps)} reps</div>
+        <div class="tr-cue-box">
+          <div class="tr-cue-label" style="color:${COLORS.functional}">Coach Cue</div>
+          <div class="tr-cue-text">${esc(ex.cue)}</div>
+        </div>
+        ${ex.youtube ? `<a class="tr-yt-link" href="${esc(ex.youtube)}" target="_blank" rel="noopener noreferrer">Watch tutorial ↗</a>` : ''}
+      </div>
+
+      <div class="tr-card">
+        <div class="tr-sets-head">
+          <div class="tr-sets-label">Sets</div>
+          <div class="tr-sets-last">${ex.lastWeight ? 'Last: ' + fmtNum(ex.lastWeight) + 'kg × ' + ex.lastReps : ''}</div>
+        </div>
+        ${ex.coachTip ? `<div class="tr-coach-tip-inline">${esc(ex.coachTip)}</div>` : ''}
+        <div class="tr-note-row">
+          <span class="tr-note-label">Note</span>
+          <input type="text" class="tr-note-input" value="${esc(state.exerciseNotesDraft[ex.id] || '')}" placeholder="e.g. felt easy — add weight next time" oninput="App.changeNote('${ex.id}', this.value)"/>
+        </div>
+        <div>${sets.map((s, i) => setRow(ex, s, i, sets.length)).join('')}</div>
+      </div>`;
+  }
   function renderLiveFunctional() {
     const workout = D.abWorkouts[state.activeWorkoutKey];
-    const idx = state.exerciseIdx;
-    const ex = workout.exercises[idx];
-    const sets = state.setLogs[ex.id];
-    const isLast = idx === workout.exercises.length - 1;
-    const nextEx = workout.exercises[idx + 1] || null;
-    const progressPct = Math.round((idx / workout.exercises.length) * 100);
+    const steps = workout.supersetSteps;
+    // Guard against a session saved before superset grouping existed, whose
+    // exerciseIdx could exceed the new (shorter) step count — resumed data
+    // per exercise is unaffected either way, this only clamps which step
+    // shows first.
+    if (state.exerciseIdx >= steps.length) state.exerciseIdx = steps.length - 1;
+    const stepIdx = state.exerciseIdx;
+    const stepIndices = steps[stepIdx];
+    const step = currentStep();
+    const isSuperset = step.length > 1;
+    const isLast = stepIdx === steps.length - 1;
+    const nextStep = !isLast ? steps[stepIdx + 1].map(i => workout.exercises[i]) : null;
+    const progressPct = Math.round((stepIdx / steps.length) * 100);
+    const subLabel = isSuperset
+      ? `Exercises ${stepIndices[0] + 1}–${stepIndices[1] + 1} of ${workout.exercises.length}`
+      : `Exercise ${stepIndices[0] + 1} of ${workout.exercises.length}`;
 
     els.root.innerHTML = `<div class="tr-live-header">
         <div class="tr-live-topbar">
           <button class="tr-icon-btn" onclick="App.closeLive()">${iconClose()}</button>
           <div class="tr-live-title-block">
             <div class="tr-live-title">${esc(workout.label)}</div>
-            <div class="tr-live-sub">Exercise ${idx + 1} of ${workout.exercises.length}</div>
+            <div class="tr-live-sub">${subLabel}</div>
           </div>
           <div style="width:34px"></div>
         </div>
         <div class="tr-progress-bar"><div class="tr-progress-fill" style="width:${progressPct}%;background:${COLORS.functional}"></div></div>
       </div>
       <div class="tr-live-body">
-        <div class="tr-card">
-          <div class="tr-ex-name">${esc(ex.name)}</div>
-          <div class="tr-ex-target">${ex.target_sets} sets × ${esc(ex.target_reps)} reps</div>
-          <div class="tr-cue-box">
-            <div class="tr-cue-label" style="color:${COLORS.functional}">Coach Cue</div>
-            <div class="tr-cue-text">${esc(ex.cue)}</div>
-          </div>
-          ${ex.youtube ? `<a class="tr-yt-link" href="${esc(ex.youtube)}" target="_blank" rel="noopener noreferrer">Watch tutorial ↗</a>` : ''}
-        </div>
+        ${isSuperset ? `<div class="tr-superset-banner">SUPERSET — do a set of each back to back, then rest</div>` : ''}
+        ${step.map((ex, i) => exerciseBlock(ex, isSuperset ? (i === 0 ? 'A' : 'B') : null)).join('')}
+        ${state.restActive ? restCard(nextStep) : ''}
 
-        <div class="tr-card">
-          <div class="tr-sets-head">
-            <div class="tr-sets-label">Sets</div>
-            <div class="tr-sets-last">${ex.lastWeight ? 'Last: ' + fmtNum(ex.lastWeight) + 'kg × ' + ex.lastReps : ''}</div>
-          </div>
-          ${ex.coachTip ? `<div class="tr-coach-tip-inline">${esc(ex.coachTip)}</div>` : ''}
-          <div class="tr-note-row">
-            <span class="tr-note-label">Note</span>
-            <input type="text" class="tr-note-input" value="${esc(state.exerciseNotesDraft[ex.id] || '')}" placeholder="e.g. felt easy — add weight next time" oninput="App.changeNote('${ex.id}', this.value)"/>
-          </div>
-          <div>${sets.map((s, i) => setRow(ex, s, i, sets.length)).join('')}</div>
-          ${state.restActive ? restCard(nextEx) : ''}
-        </div>
-
-        ${nextEx ? `<div class="tr-upnext-card" onclick="App.jumpNext()">
+        ${nextStep ? `<div class="tr-upnext-card" onclick="App.jumpNext()">
           <div style="flex:1">
             <div class="tr-upnext-label">Up Next</div>
-            <div class="tr-upnext-title">${esc(nextEx.name)}</div>
-            <div class="tr-upnext-target">${nextEx.target_sets} sets × ${esc(nextEx.target_reps)}</div>
+            <div class="tr-upnext-title">${nextStep.map(e => esc(e.name)).join(' + ')}</div>
+            <div class="tr-upnext-target">${nextStep.map(e => `${e.target_sets} × ${esc(e.target_reps)}`).join(' · ')}</div>
           </div>
           ${iconChevron()}
         </div>` : ''}
       </div>
       <div class="tr-live-footer">
-        <button class="tr-btn-nav tr-btn-prev" style="color:${idx === 0 ? 'rgba(245,243,239,.25)' : 'rgba(245,243,239,.85)'}" ${idx === 0 ? 'disabled' : ''} onclick="App.prevExercise()">Previous</button>
+        <button class="tr-btn-nav tr-btn-prev" style="color:${stepIdx === 0 ? 'rgba(245,243,239,.25)' : 'rgba(245,243,239,.85)'}" ${stepIdx === 0 ? 'disabled' : ''} onclick="App.prevExercise()">Previous</button>
         <button class="tr-btn-nav tr-btn-next" style="background:${COLORS.functional}" ${state.saving ? 'disabled' : ''} onclick="App.nextExercise()">${state.saving ? 'Saving…' : (isLast ? 'Finish Workout' : 'Next Exercise')}</button>
       </div>`;
   }
@@ -777,7 +798,8 @@
     ${copyLink}`;
   }
 
-  function restCard(nextEx) {
+  function restCard(nextExercises) {
+    const nextLabel = nextExercises ? nextExercises.map(e => e.name).join(' + ') : 'finish workout';
     return `<div class="tr-rest-card">
       <div class="tr-rest-ring-wrap">
         <svg width="48" height="48" viewBox="0 0 60 60" style="transform:rotate(-90deg)">
@@ -788,7 +810,7 @@
       </div>
       <div class="tr-rest-info">
         <div class="tr-rest-label" style="color:${COLORS.functional}">Resting</div>
-        <div class="tr-rest-next">Next: ${esc(nextEx ? nextEx.name : 'finish workout')}</div>
+        <div class="tr-rest-next">Next: ${esc(nextLabel)}</div>
       </div>
       <button class="tr-skip-btn" onclick="App.skipRest()">Skip</button>
     </div>`;
@@ -1084,9 +1106,19 @@
           state.sessionPRCount++;
           showToast('New PR — ' + fmtNum(w) + 'kg × ' + set.reps + ' on ' + ex.name.replace(' (Dumbbell)', ''), 'gold');
         }
-        const allDone = state.setLogs[exId].every(s => s.done);
-        const isLastExercise = state.exerciseIdx === workout.exercises.length - 1;
-        if (D.autoRestTimer && !(allDone && isLastExercise)) {
+        const stepIndices = workout.supersetSteps[state.exerciseIdx];
+        const stepExIds = stepIndices.map(i => workout.exercises[i].id);
+        // In a superset, don't rest after the first exercise's set while its
+        // paired exercise still has sets left — go straight to the pair
+        // instead, and rest once after both (this is what actually delivers
+        // the time saved by supersetting, not just showing them together).
+        const isFirstOfPair = stepExIds.length === 2 && stepExIds[0] === exId;
+        const partnerId = isFirstOfPair ? stepExIds[1] : null;
+        const partnerHasRemaining = partnerId && state.setLogs[partnerId].some(s => !s.done);
+        const deferRest = isFirstOfPair && partnerHasRemaining;
+        const allStepDone = stepExIds.every(id => state.setLogs[id].every(s => s.done));
+        const isLastStep = state.exerciseIdx === workout.supersetSteps.length - 1;
+        if (D.autoRestTimer && !deferRest && !(allStepDone && isLastStep)) {
           state.restActive = true;
           state.restSecLeft = D.restSeconds;
           state.restEndsAt = Date.now() + D.restSeconds * 1000;
@@ -1104,7 +1136,7 @@
     },
     jumpNext() {
       const workout = D.abWorkouts[state.activeWorkoutKey];
-      state.exerciseIdx = Math.min(workout.exercises.length - 1, state.exerciseIdx + 1);
+      state.exerciseIdx = Math.min(workout.supersetSteps.length - 1, state.exerciseIdx + 1);
       state.restActive = false;
       saveSession();
       renderScreen();
@@ -1112,7 +1144,7 @@
     nextExercise() {
       if (state.saving) return;
       const workout = D.abWorkouts[state.activeWorkoutKey];
-      if (state.exerciseIdx < workout.exercises.length - 1) {
+      if (state.exerciseIdx < workout.supersetSteps.length - 1) {
         state.exerciseIdx++;
         state.restActive = false;
         saveSession();

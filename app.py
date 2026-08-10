@@ -187,6 +187,50 @@ def _parse_rep_ceiling(reps_str):
     return int(nums[-1]) if nums else None
 
 
+# Exercise-array index pairs (0-based, into LIVE_WORKOUT_EXERCISES[key]) shown
+# together on one live-workout screen as a superset. Chosen from evidence on
+# agonist-antagonist paired sets (roughly halves rest time with no loss in
+# strength/hypertrophy outcomes vs straight sets): push+pull (chest/back),
+# and elbow flexion+extension (biceps/triceps), plus the low-fatigue
+# calf+core finisher pair. Deliberately excludes the heavy compound lift
+# (index 0: Squat/Deadlift) and the single shoulder-isolation exercise
+# (index 3), which have no antagonist partner in a 9-exercise session
+# without forcing an unrelated pairing — see _superset_steps().
+SUPERSET_PAIRS = {
+    'workout_a_gym': [(1, 2), (4, 6), (7, 8)],
+    'workout_a_home': [(1, 2), (4, 6), (7, 8)],
+    'workout_b_gym': [(1, 2), (4, 6), (7, 8)],
+    'workout_b_home': [(1, 2), (4, 6), (7, 8)],
+}
+
+
+def _superset_steps(key, count):
+    """Group exercise indices 0..count-1 into display steps of 1 or 2,
+    preserving overall order. Pairs are grouped into one step wherever they
+    fall — even if a solo exercise's index sits between them in the
+    underlying array — without renumbering the array itself, so exercise_id
+    (and the session_sets/exercise_notes/PR history keyed by it) never
+    shifts just because of how exercises are grouped on screen."""
+    paired = {}
+    for a, b in SUPERSET_PAIRS.get(key, []):
+        paired[a] = b
+        paired[b] = a
+    consumed = set()
+    steps = []
+    for i in range(count):
+        if i in consumed:
+            continue
+        partner = paired.get(i)
+        if partner is not None and partner not in consumed:
+            steps.append([i, partner])
+            consumed.add(i)
+            consumed.add(partner)
+        else:
+            steps.append([i])
+            consumed.add(i)
+    return steps
+
+
 def _build_ab_workouts():
     out = {}
     for key, exercises in LIVE_WORKOUT_EXERCISES.items():
@@ -205,6 +249,7 @@ def _build_ab_workouts():
                 }
                 for i, ex in enumerate(exercises)
             ],
+            'supersetSteps': _superset_steps(key, len(exercises)),
         }
     return out
 
@@ -881,7 +926,7 @@ def _build_initial_data(db):
             last = _last_set_for_exercise(db, ex['id'])
             tip = _progression_tip(db, ex['id'], ex['repCeiling'], ex['progressionKg'])
             exs.append(dict(ex, lastWeight=last['weight'], lastReps=last['reps'], coachTip=_coach_tip_text(tip)))
-        ab_workouts_out[key] = {'label': w['label'], 'exercises': exs}
+        ab_workouts_out[key] = {'label': w['label'], 'exercises': exs, 'supersetSteps': w['supersetSteps']}
 
     # Sessions logged from this Sun-Sat week through today — a simple
     # activity count, not tied to any required schedule.
