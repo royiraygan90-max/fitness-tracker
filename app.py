@@ -22,8 +22,8 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'poci', 'flexibility'}
 
 WORKOUT_A_GYM_EXERCISES = [
-    'Squat', 'Bench Press', 'Lat Pulldown', 'Cable Lateral Raise', 'Cable Bicep Curl',
-    'Back Extension', 'Overhead Tricep Extension (cable)',
+    'Squat', 'Machine Chest Press', 'Lat Pulldown', 'Reverse Pec Deck Fly', 'Single-Arm Preacher Curl',
+    'Back Extension', 'Tricep Pushdown (cable)',
     'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_A_HOME_EXERCISES = [
@@ -51,18 +51,18 @@ LIVE_WORKOUT_EXERCISES = {
     'workout_a_gym': [
         {'name': 'Squat', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/CsPAsICeRsM',
          'tip': "Chest up, knees track over toes. Sit back like into a chair.", 'progression_kg': 5},
-        {'name': 'Bench Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/0cXAp6WhSj4',
-         'tip': "Keep shoulder blades pinned together, feet flat on the floor. Control the bar to mid-chest.", 'progression_kg': 2.5},
+        {'name': 'Machine Chest Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/YXjhMV7uz4c',
+         'tip': "Adjust the seat so the handles line up with mid-chest. Press forward without locking out your elbows, squeeze at full extension.", 'progression_kg': 2.5},
         {'name': 'Lat Pulldown', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/KlxStcwWHcM',
          'tip': "Shoulder-width overhand grip, slight backward lean with a fixed torso — no swinging. Drive elbows down and back, lats before arms.", 'progression_kg': 2.5},
-        {'name': 'Cable Lateral Raise', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/HCfU6LGpgMk',
-         'tip': "Low pulley, stand side-on so the handle starts crossed in front of you. Lead with the elbow, raise to shoulder height only.", 'progression_kg': 2.5},
-        {'name': 'Cable Bicep Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/Wm-fIUOHLy8',
-         'tip': "Keep elbows pinned to your sides. No swinging.", 'progression_kg': 2.5},
+        {'name': 'Reverse Pec Deck Fly', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/v0CxZlWX9zQ',
+         'tip': "Chest against the pad, arms parallel to the floor. Squeeze your shoulder blades together as you open your arms — no momentum.", 'progression_kg': 2.5},
+        {'name': 'Single-Arm Preacher Curl', 'sets': 2, 'reps': '10–12 each arm', 'youtube': 'https://www.youtube.com/shorts/a-6eb-bmgHI',
+         'tip': "Upper arm braced flat against the pad, one arm at a time. Full extension at the bottom, squeeze at the top, then switch arms.", 'progression_kg': 2.5},
         {'name': 'Back Extension', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/shorts/P489_62b8JU',
          'tip': "Hips on the pad, rise until your body forms a straight line — don't hyperextend at the top.", 'progression_kg': 2.5},
-        {'name': 'Overhead Tricep Extension (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/7hx0-DZgdl8',
-         'tip': "Elbows pointing forward and still. Lower behind your head for a full stretch, then extend.", 'progression_kg': 2.5},
+        {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/aHfbuBf1TJk',
+         'tip': "Keep elbows pinned at your sides, full extension at the bottom.", 'progression_kg': 2.5},
         {'name': 'Calf Raise (machine)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/yQZDGjL-xT4',
          'tip': "Full stretch at the bottom, pause and squeeze hard at the top.", 'progression_kg': 2.5},
         {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
