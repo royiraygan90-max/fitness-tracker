@@ -64,6 +64,7 @@
   const PLAN_OPTIONS = [
     ['workout_a_gym', 'Workout A · Gym'], ['workout_a_home', 'Workout A · Home'],
     ['workout_b_gym', 'Workout B · Gym'], ['workout_b_home', 'Workout B · Home'],
+    ['workout_c_home', 'Workout C · Home'],
     ['yoga', 'Yoga'], ['poci', 'Poci'],
   ];
   function planOptionColor(key) {
@@ -270,6 +271,17 @@
     </div>`;
   }
 
+  // Workout C has no gym counterpart (bodyweight-only), so it gets a single
+  // full-width "Start" button instead of the Gym/Home split.
+  function soloCard(labelLetter, sub, key) {
+    return `<div class="tr-card tr-ab-card">
+      <div class="tr-card-title" style="margin-top:0">Workout ${labelLetter} · ${sub}</div>
+      <div class="tr-ab-buttons">
+        <button class="tr-ab-btn" style="border-color:${COLORS.functional}" onclick="App.startFunctional('${key}')">Start</button>
+      </div>
+    </div>`;
+  }
+
   function calendarDayCell(day) {
     const tappable = day.status !== 'done';
     let marker;
@@ -401,6 +413,10 @@
       <div class="tr-ab-row">
         ${abCard('A', 'workout_a_gym', 'workout_a_home')}
         ${abCard('B', 'workout_b_gym', 'workout_b_home')}
+      </div>
+
+      <div class="tr-ab-row">
+        ${soloCard('C', 'Bodyweight', 'workout_c_home')}
       </div>
 
       <div class="tr-quick-row">
