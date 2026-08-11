@@ -32,9 +32,9 @@ WORKOUT_A_HOME_EXERCISES = [
     'Step-Edge Calf Raise (dumbbell)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_GYM_EXERCISES = [
-    'Romanian Deadlift', 'Upper Chest Fly (cable/pec deck)', 'Cable Row',
-    'Bulgarian Split Squat (Smith machine)', 'Tricep Pushdown (cable)', 'Face Pull',
-    'EZ-Bar Curl', 'Calf Raise (machine)', 'Core Finisher (your choice)'
+    'Smith Machine RDL', 'Upper Chest Fly (cable/pec deck)', 'Chest-Supported Row (machine)',
+    'Hack Squat Machine', 'Overhead Dumbbell Tricep Extension', 'Face Pull',
+    'Machine Bicep Curl (seated)', 'Calf Raise (machine)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_HOME_EXERCISES = [
     'Romanian Deadlift (dumbbell)', 'Incline Dumbbell Press', 'Chest-Supported Row (dumbbell)',
@@ -89,20 +89,20 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
     'workout_b_gym': [
-        {'name': 'Romanian Deadlift', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/OVd1pq1cAvE',
-         'tip': "Hinge at the hips, push hips back. Keep the bar close to your legs.", 'progression_kg': 5},
+        {'name': 'Smith Machine RDL', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/Wl4tdsx2Sy8',
+         'tip': "Hinge at the hips, push hips back, keep the bar close to your legs. The fixed bar path means you don't need to balance it — focus on the stretch.", 'progression_kg': 5},
         {'name': 'Upper Chest Fly (cable/pec deck)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/MEZ8UPbOO08',
          'tip': "Slight bend in elbows, squeeze at the top, control the negative.", 'progression_kg': 2.5},
-        {'name': 'Cable Row', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/8QuMq1GMMng',
-         'tip': "Pull elbows back, squeeze shoulder blades together, keep torso still.", 'progression_kg': 2.5},
-        {'name': 'Bulgarian Split Squat (Smith machine)', 'sets': 3, 'reps': '8 each leg', 'youtube': 'https://www.youtube.com/shorts/vVfarGiW9qI',
-         'tip': "Bar across your upper back, rear foot up on a bench behind you. Front foot far enough forward that your shin stays vertical, ~80–90% of the load on the front leg.", 'progression_kg': 5},
-        {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/aHfbuBf1TJk',
-         'tip': "Keep elbows pinned at your sides, full extension at the bottom.", 'progression_kg': 2.5},
+        {'name': 'Chest-Supported Row (machine)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/FTwvmczf7bE',
+         'tip': "Chest pressed into the pad the whole set — no swinging. Drive elbows back and squeeze your shoulder blades together.", 'progression_kg': 2.5},
+        {'name': 'Hack Squat Machine', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/fl4PtdimZSk',
+         'tip': "Feet shoulder-width on the platform, knees tracking over your toes. Don't let your lower back round at the bottom.", 'progression_kg': 5},
+        {'name': 'Overhead Dumbbell Tricep Extension', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/J565P8FzJXA',
+         'tip': "Elbows pointed at the ceiling and fixed — only your forearms move. Lower behind your head for a full stretch, then extend back up.", 'progression_kg': 2.5},
         {'name': 'Face Pull', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/sHSY0Ao8QHs',
          'tip': "Pull the rope to your forehead, elbows high and wide. Squeeze your shoulder blades together at the end.", 'progression_kg': 2.5},
-        {'name': 'EZ-Bar Curl', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/d2r5TCqnR4Y',
-         'tip': "Elbows pinned to your sides, squeeze at the top, control the negative.", 'progression_kg': 2.5},
+        {'name': 'Machine Bicep Curl (seated)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/1qAcqvUx6bE',
+         'tip': "Upper arms flat against the pad the whole set — no swinging. Squeeze at the top, control the way down.", 'progression_kg': 2.5},
         {'name': 'Calf Raise (machine)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/yQZDGjL-xT4',
          'tip': "Full stretch at the bottom, pause and squeeze hard at the top.", 'progression_kg': 2.5},
         {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,

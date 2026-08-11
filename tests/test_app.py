@@ -170,7 +170,7 @@ def test_save_functional_session(client):
         'date': '2026-07-01',
         'durationSec': 1800,
         'exercises': [
-            {'id': 'workout_b_gym_0', 'name': 'Romanian Deadlift', 'sets': [
+            {'id': 'workout_b_gym_0', 'name': 'Smith Machine RDL', 'sets': [
                 {'weight': 25, 'reps': 10}, {'weight': 25, 'reps': 10}, {'weight': 25, 'reps': 9},
             ]},
         ],
@@ -184,7 +184,7 @@ def test_save_functional_session(client):
     assert data['prCount'] == 0
 
     r2 = client.get('/')
-    assert b'Romanian Deadlift' in r2.data
+    assert b'Smith Machine RDL' in r2.data
 
 
 def test_save_functional_session_invalid_workout_key(client):
