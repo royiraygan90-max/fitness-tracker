@@ -18,7 +18,7 @@ const typeRadios = document.querySelectorAll('input[name="workout_type"]');
 const exerciseSection = document.getElementById('exercise-section');
 const notesLabel = document.getElementById('notes-label');
 
-const WORKOUT_TYPES = ['workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home'];
+const WORKOUT_TYPES = ['workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'workout_c_home'];
 
 function updateFormForType(type) {
   const isWorkout = WORKOUT_TYPES.includes(type);

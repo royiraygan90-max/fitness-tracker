@@ -11,6 +11,7 @@
   'workout_a_home': '🏠 Workout A · Home',
   'workout_b_gym': '🏋️ Workout B · Gym',
   'workout_b_home': '🏠 Workout B · Home',
+  'workout_c_home': '💪 Workout C · Bodyweight',
   'workout_a': '💪 Workout A (legacy)',
   'workout_b': '💪 Workout B (legacy)',
   'poci': '🏐 Poci',
@@ -24,6 +25,7 @@
   <a href="{{ url_for('history', type='workout_a_home') }}" class="filter-tab type-workout_a_home {% if filter_type == 'workout_a_home' %}active{% endif %}">🏠 Workout A · Home</a>
   <a href="{{ url_for('history', type='workout_b_gym') }}" class="filter-tab type-workout_b_gym {% if filter_type == 'workout_b_gym' %}active{% endif %}">🏋️ Workout B · Gym</a>
   <a href="{{ url_for('history', type='workout_b_home') }}" class="filter-tab type-workout_b_home {% if filter_type == 'workout_b_home' %}active{% endif %}">🏠 Workout B · Home</a>
+  <a href="{{ url_for('history', type='workout_c_home') }}" class="filter-tab type-workout_c_home {% if filter_type == 'workout_c_home' %}active{% endif %}">💪 Workout C · Bodyweight</a>
   <a href="{{ url_for('history', type='poci') }}" class="filter-tab type-poci {% if filter_type == 'poci' %}active{% endif %}">🏐 Poci</a>
   <a href="{{ url_for('history', type='flexibility') }}" class="filter-tab type-flexibility {% if filter_type == 'flexibility' %}active{% endif %}">🧘 Flexibility</a>
 </div>

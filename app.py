@@ -19,7 +19,7 @@ def format_date_filter(value):
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 
-VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'poci', 'flexibility'}
+VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'workout_c_home', 'poci', 'flexibility'}
 
 WORKOUT_A_GYM_EXERCISES = [
     'Squat', 'Machine Chest Press', 'Lat Pulldown', 'Reverse Pec Deck Fly', 'Single-Arm Preacher Curl',
@@ -40,6 +40,13 @@ WORKOUT_B_HOME_EXERCISES = [
     'Romanian Deadlift (dumbbell)', 'Incline Dumbbell Press', 'Chest-Supported Row (dumbbell)',
     'Bulgarian Split Squat (dumbbell)', 'Tricep Kickback (dumbbell)', 'Prone Incline Reverse Fly (dumbbell)',
     'Dumbbell Hammer Curl', 'Calf Raise (dumbbell)', 'Core Finisher (your choice)'
+]
+# Bodyweight-only circuit for a real home session (pull-up bar, dip bars,
+# push-up parallettes, small dumbbells) — no gym counterpart by design, for
+# days with limited time or no gym access.
+WORKOUT_C_HOME_EXERCISES = [
+    'Pull-up', 'Push-up (parallettes)', 'Parallel Bar Dip', 'Bodyweight Squat',
+    'Pike Push-up', 'Wrist Curl (dumbbell)', 'Sit-up / Crunch'
 ]
 
 # progression_kg is the suggested weight jump for the Coach's double-progression
@@ -128,6 +135,22 @@ LIVE_WORKOUT_EXERCISES = {
         {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
          'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
+    'workout_c_home': [
+        {'name': 'Pull-up', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/shorts/ZPG8OsHKXLw',
+         'tip': "Overhand, shoulder-width grip. Pull your chest toward the bar, control the descent.", 'progression_kg': 2.5},
+        {'name': 'Push-up (parallettes)', 'sets': 3, 'reps': 'to failure / 12', 'youtube': 'https://www.youtube.com/shorts/wk9O2HgqYSQ',
+         'tip': "Hands on the parallettes, chest sinks below hand level for a deeper stretch than the floor allows. Keep a straight line from ankles to head.", 'progression_kg': 2.5},
+        {'name': 'Parallel Bar Dip', 'sets': 3, 'reps': 'to failure / 8', 'youtube': 'https://www.youtube.com/shorts/1IJqGSebOEg',
+         'tip': "Lower until your shoulders dip below your elbows, slight forward lean to bias chest and triceps. Full lockout at the top.", 'progression_kg': 2.5},
+        {'name': 'Bodyweight Squat', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/Qgpxx1Bxmgs',
+         'tip': "Chest up, knees track over toes. Sit back like into a chair, full depth.", 'progression_kg': None},
+        {'name': 'Pike Push-up', 'sets': 2, 'reps': 'to failure / 10', 'youtube': 'https://www.youtube.com/shorts/rWnpH-RGdmA',
+         'tip': "Hips high, forming an inverted V. Lower your head toward the floor between your hands, push back up through your shoulders.", 'progression_kg': 2.5},
+        {'name': 'Wrist Curl (dumbbell)', 'sets': 2, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/xY8c6LcLRao',
+         'tip': "Forearm resting on your knee, wrist hanging off the edge. Curl through the wrist only — no elbow movement.", 'progression_kg': 2.5},
+        {'name': 'Sit-up / Crunch', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/YlJ9FU9JS_0',
+         'tip': "Feet flat, hands lightly by your ears. Curl your torso up without pulling on your neck, control the way down.", 'progression_kg': None},
+    ],
 }
 
 # ===== TRAINING APP (Home/Plan/History redesign) =====
@@ -148,10 +171,14 @@ WORKOUT_A_GYM_COLOR = '#3B82F6'
 WORKOUT_B_GYM_COLOR = '#1D4ED8'
 WORKOUT_A_HOME_COLOR = '#22C55E'
 WORKOUT_B_HOME_COLOR = '#15803D'
+# Workout C has no gym counterpart (bodyweight-only, real-home circuit) so it
+# gets its own accent rather than slotting into the blue/green gym/home split.
+WORKOUT_C_HOME_COLOR = '#06B6D4'
 
 WORKOUT_TYPE_LABELS = {
     'workout_a_gym': 'Workout A · Gym', 'workout_a_home': 'Workout A · Home',
     'workout_b_gym': 'Workout B · Gym', 'workout_b_home': 'Workout B · Home',
+    'workout_c_home': 'Workout C · Home',
     'workout_a': 'Workout A (legacy)', 'workout_b': 'Workout B (legacy)',
 }
 REST_SECONDS_DEFAULT = 90
@@ -168,6 +195,7 @@ PLAN_META = {
     'workout_a_home': (WORKOUT_A_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_a_home'], 'functional'),
     'workout_b_gym': (WORKOUT_B_GYM_COLOR, WORKOUT_TYPE_LABELS['workout_b_gym'], 'functional'),
     'workout_b_home': (WORKOUT_B_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_b_home'], 'functional'),
+    'workout_c_home': (WORKOUT_C_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_c_home'], 'functional'),
     'yoga': (YOGA_COLOR, 'Yoga', 'yoga'),
     'poci': (POCI_COLOR, 'Poci', 'poci'),
 }
@@ -622,9 +650,9 @@ def _format_legacy_exercise_line(name, sets, reps, weight_kg):
 
 
 def _workout_letter(key):
-    """'A' or 'B' for any workout_a*/workout_b* key (new-style gym/home
-    variants and legacy 2-type keys alike), else None — lets the calendar
-    show which of the two you last did instead of an ambiguous same-color
+    """'A'/'B'/'C' for any workout_a*/workout_b*/workout_c* key (new-style
+    gym/home variants and legacy 2-type keys alike), else None — lets the
+    calendar show which one you last did instead of an ambiguous same-color
     dot for both."""
     if not key:
         return None
@@ -632,6 +660,8 @@ def _workout_letter(key):
         return 'A'
     if key.startswith('workout_b'):
         return 'B'
+    if key.startswith('workout_c'):
+        return 'C'
     return None
 
 
@@ -694,6 +724,7 @@ def _query_history(db, today, limit=None):
         'workout_a_home': ('functional', WORKOUT_A_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_a_home']),
         'workout_b_gym': ('functional', WORKOUT_B_GYM_COLOR, WORKOUT_TYPE_LABELS['workout_b_gym']),
         'workout_b_home': ('functional', WORKOUT_B_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_b_home']),
+        'workout_c_home': ('functional', WORKOUT_C_HOME_COLOR, WORKOUT_TYPE_LABELS['workout_c_home']),
         'poci': ('poci', POCI_COLOR, 'Poci'),
         'flexibility': ('flexibility', FLEXIBILITY_COLOR, 'Flexibility'),
     }
@@ -1069,7 +1100,7 @@ def log_workout():
         )
         workout_id = cur.lastrowid
 
-        if workout_type in ('workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home'):
+        if workout_type in ('workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'workout_c_home'):
             checked = request.form.getlist('exercises')
             for ex in checked:
                 sets_val = request.form.get(f'sets_{ex}', '0')
@@ -1092,6 +1123,7 @@ def log_workout():
         workout_a_home_exercises=WORKOUT_A_HOME_EXERCISES,
         workout_b_gym_exercises=WORKOUT_B_GYM_EXERCISES,
         workout_b_home_exercises=WORKOUT_B_HOME_EXERCISES,
+        workout_c_home_exercises=WORKOUT_C_HOME_EXERCISES,
         today=str(date.today()))
 
 

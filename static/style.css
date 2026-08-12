@@ -21,6 +21,7 @@
   --workout-b-gym: #1d4ed8;
   --workout-a-home: #22c55e;
   --workout-b-home: #15803d;
+  --workout-c-home: #06b6d4;
 
   --radius: 12px;
   --radius-sm: 8px;
@@ -154,6 +155,8 @@ a:hover { color: var(--accent-hover); }
 .heatmap-cell.type-workout_b_gym { background-color: var(--workout-b-gym); }
 .type-workout_b_home, .type-dot.type-workout_b_home, .legend-dot.type-workout_b_home,
 .heatmap-cell.type-workout_b_home { background-color: var(--workout-b-home); }
+.type-workout_c_home, .type-dot.type-workout_c_home, .legend-dot.type-workout_c_home,
+.heatmap-cell.type-workout_c_home { background-color: var(--workout-c-home); }
 .type-poci, .type-dot.type-poci, .legend-dot.type-poci,
 .heatmap-cell.type-poci { background-color: var(--poci); }
 .type-flexibility, .type-dot.type-flexibility, .legend-dot.type-flexibility,
@@ -171,6 +174,7 @@ a:hover { color: var(--accent-hover); }
 .type-badge.type-workout_b_gym { background: rgba(29,78,216,0.25); color: #bfdbfe; border: 1px solid rgba(29,78,216,0.4); }
 .type-badge.type-workout_a_home { background: rgba(34,197,94,0.2); color: #86efac; border: 1px solid rgba(34,197,94,0.4); }
 .type-badge.type-workout_b_home { background: rgba(21,128,61,0.25); color: #6ee7a3; border: 1px solid rgba(21,128,61,0.45); }
+.type-badge.type-workout_c_home { background: rgba(6,182,212,0.2); color: #67e8f9; border: 1px solid rgba(6,182,212,0.4); }
 .type-badge.type-poci { background: rgba(249,115,22,0.2); color: #fdba74; border: 1px solid rgba(249,115,22,0.4); }
 .type-badge.type-flexibility { background: rgba(168,85,247,0.2); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.4); }
 
@@ -219,6 +223,7 @@ a:hover { color: var(--accent-hover); }
 .type-card.type-workout_b_gym:has(input:checked) { border-color: var(--workout-b-gym); background: rgba(29,78,216,0.1); }
 .type-card.type-workout_a_home:has(input:checked) { border-color: var(--workout-a-home); background: rgba(34,197,94,0.08); }
 .type-card.type-workout_b_home:has(input:checked) { border-color: var(--workout-b-home); background: rgba(21,128,61,0.1); }
+.type-card.type-workout_c_home:has(input:checked) { border-color: var(--workout-c-home); background: rgba(6,182,212,0.1); }
 .type-card.type-poci:has(input:checked) { border-color: var(--poci); background: rgba(249,115,22,0.08); }
 .type-card.type-flexibility:has(input:checked) { border-color: var(--flexibility); background: rgba(168,85,247,0.08); }
 .type-icon { font-size: 2rem; }

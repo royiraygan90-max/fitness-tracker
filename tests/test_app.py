@@ -61,7 +61,7 @@ def test_log_workout_a_home_post(client):
     assert r.status_code == 200
 
 def test_live_workout_page_loads(client):
-    for workout_type in ('workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home'):
+    for workout_type in ('workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'workout_c_home'):
         r = client.get(f'/workout/live/{workout_type}')
         assert r.status_code == 200, workout_type
 
@@ -185,6 +185,28 @@ def test_save_functional_session(client):
 
     r2 = client.get('/')
     assert b'Smith Machine RDL' in r2.data
+
+
+def test_save_functional_session_workout_c_home(client):
+    import json
+    payload = {
+        'workoutKey': 'workout_c_home',
+        'date': '2026-07-02',
+        'durationSec': 1500,
+        'exercises': [
+            {'id': 'workout_c_home_0', 'name': 'Pull-up', 'sets': [
+                {'weight': 0, 'reps': 8}, {'weight': 0, 'reps': 7}, {'weight': 0, 'reps': 6},
+            ]},
+        ],
+        'notes': {},
+    }
+    r = client.post('/api/sessions/functional', data=json.dumps(payload), content_type='application/json')
+    assert r.status_code == 200
+    data = json.loads(r.data)
+    assert data['success'] is True
+
+    r2 = client.get('/')
+    assert b'Pull-up' in r2.data
 
 
 def test_save_functional_session_invalid_workout_key(client):
@@ -367,9 +389,9 @@ def test_legacy_workout_type_still_displays(client):
     assert b'Workout A (legacy)' in r2.data
 
 
-def test_valid_workout_types_are_the_four_gym_home_variants(client):
+def test_valid_workout_types_are_the_gym_home_variants(client):
     assert flask_app.VALID_WORKOUT_TYPES == {
-        'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home',
+        'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'workout_c_home',
         'poci', 'flexibility',
     }
 
