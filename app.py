@@ -75,9 +75,8 @@ _GYM_LAT_PULLDOWN = {
 _GYM_ROW = {
     'id': 'workout_b_gym_2', 'name': 'Chest-Supported Row (machine)', 'sets': 3, 'reps': '8–12', 'youtube': 'https://www.youtube.com/shorts/FTwvmczf7bE',
     'tip': "Chest pressed into the pad the whole set — no swinging. Drive elbows back and squeeze your shoulder blades together.", 'progression_kg': 2.5}
-# No verified demo video for this one yet — youtube None is supported (Core Finisher did the same).
 _GYM_SHOULDER_PRESS = {
-    'id': 'gym_shoulder_press', 'name': 'Machine Shoulder Press', 'sets': 3, 'reps': '8–12', 'youtube': None,
+    'id': 'gym_shoulder_press', 'name': 'Machine Shoulder Press', 'sets': 3, 'reps': '8–12', 'youtube': 'https://www.youtube.com/shorts/Gkk-6q7Rq-s',
     'tip': "Seat set so the handles start at shoulder height. Press straight up without shrugging, stop just short of locking out, control the way down.", 'progression_kg': 2.5}
 
 # progression_kg is the suggested weight jump for the Coach's double-progression
@@ -125,7 +124,7 @@ LIVE_WORKOUT_EXERCISES = {
         _GYM_SHOULDER_PRESS,
         {'id': 'workout_b_gym_4', 'name': 'Overhead Dumbbell Tricep Extension', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/J565P8FzJXA',
          'tip': "Elbows pointed at the ceiling and fixed — only your forearms move. Lower behind your head for a full stretch, then extend back up.", 'progression_kg': 2.5},
-        {'id': 'gym_wrist_extension', 'name': 'Wrist Extension (dumbbell)', 'sets': 2, 'reps': '15', 'youtube': None,
+        {'id': 'gym_wrist_extension', 'name': 'Wrist Extension (dumbbell)', 'sets': 2, 'reps': '15', 'youtube': 'https://www.youtube.com/shorts/N284Q08Ne2g',
          'tip': "Start light. Forearm resting palm-down on your knee or a bench, wrist hanging off the edge — lift the back of your hand up through the wrist only. Stop if you feel numbness or tingling in your fingers.", 'progression_kg': 1},
     ],
     'workout_b_home': [
