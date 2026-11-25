@@ -444,3 +444,96 @@ def test_purge_stale_mockup_sessions_leaves_real_data_alone(client):
     flask_app._purge_stale_mockup_sessions(db)
 
     assert db.execute('SELECT COUNT(*) FROM sessions').fetchone()[0] == 1
+
+
+# ---- Gym program: two full-body sessions, A (7 exercises) and B (8) ----
+
+COMMON_GYM = ['Squat', 'Smith Machine RDL', 'Machine Chest Press', 'Lat Pulldown',
+              'Chest-Supported Row (machine)', 'Machine Shoulder Press']
+
+
+def _gym(key):
+    return flask_app.LIVE_WORKOUT_EXERCISES[key]
+
+
+def test_gym_workout_a_lineup_and_order():
+    names = [e['name'] for e in _gym('workout_a_gym')]
+    assert names == COMMON_GYM + ['Dumbbell Hammer Curl']
+    assert flask_app.WORKOUT_A_GYM_EXERCISES == names
+    assert all(e['sets'] == 3 for e in _gym('workout_a_gym'))
+    assert [e['reps'] for e in _gym('workout_a_gym')] == ['8–12'] * 6 + ['12–15']
+
+
+def test_gym_workout_b_lineup_and_order():
+    names = [e['name'] for e in _gym('workout_b_gym')]
+    assert names == COMMON_GYM + ['Overhead Dumbbell Tricep Extension', 'Wrist Extension (dumbbell)']
+    assert flask_app.WORKOUT_B_GYM_EXERCISES == names
+    exs = _gym('workout_b_gym')
+    assert [e['sets'] for e in exs] == [3] * 7 + [2]
+    assert [e['reps'] for e in exs] == ['8–12'] * 6 + ['12–15', '15']
+
+
+def test_gym_wrist_extension_has_safety_note():
+    wrist = _gym('workout_b_gym')[-1]
+    assert 'Start light' in wrist['tip']
+    assert 'numbness or tingling in your fingers' in wrist['tip']
+
+
+def test_gym_exercise_ids_unique_and_stable():
+    for key in ('workout_a_gym', 'workout_b_gym'):
+        ids = [e['id'] for e in flask_app.AB_WORKOUTS[key]['exercises']]
+        assert len(ids) == len(set(ids))
+    # moves that were already in the old gym lineups keep their old ids
+    a = {e['name']: e['id'] for e in flask_app.AB_WORKOUTS['workout_a_gym']['exercises']}
+    assert a['Squat'] == 'workout_a_gym_0'
+    assert a['Machine Chest Press'] == 'workout_a_gym_1'
+    assert a['Lat Pulldown'] == 'workout_a_gym_2'
+    assert a['Smith Machine RDL'] == 'workout_b_gym_0'
+    # shared moves use the same id in A and B so progression carries across
+    b = {e['name']: e['id'] for e in flask_app.AB_WORKOUTS['workout_b_gym']['exercises']}
+    assert all(a[n] == b[n] for n in COMMON_GYM)
+
+
+def test_old_gym_history_is_not_reattached_to_new_exercises(client):
+    from datetime import datetime
+    db = flask_app.get_db()
+    db.execute("INSERT INTO sessions (date, session_type, workout_key, duration_sec, pr_count, created_at) "
+               "VALUES ('2026-07-01','functional','workout_a_gym',1800,0,?)", (datetime.now().isoformat(),))
+    # old positional ids: 0 Squat (kept), 3 Reverse Pec Deck Fly + 8 Core Finisher (retired)
+    for ex_id, name, w, r in [('workout_a_gym_0', 'Squat', 60, 8),
+                              ('workout_a_gym_3', 'Reverse Pec Deck Fly', 30, 12),
+                              ('workout_a_gym_8', 'Core Finisher (your choice)', 0, 20)]:
+        db.execute("INSERT INTO session_sets (session_id, exercise_id, exercise_name, set_index, weight, reps, is_pr) "
+                   "VALUES (1,?,?,0,?,?,0)", (ex_id, name, w, r))
+    db.commit()
+
+    new_ids = {e['id'] for e in flask_app.AB_WORKOUTS['workout_a_gym']['exercises']}
+    assert 'workout_a_gym_3' not in new_ids and 'workout_a_gym_8' not in new_ids
+    # kept exercise still sees its history; the new exercise in the old slot starts clean
+    assert flask_app._last_set_for_exercise(db, 'workout_a_gym_0') == {'weight': 60, 'reps': 8}
+    lat = next(e for e in flask_app.AB_WORKOUTS['workout_a_gym']['exercises'] if e['name'] == 'Lat Pulldown')
+    assert flask_app._last_set_for_exercise(db, lat['id']) == {'weight': 0, 'reps': 0}
+    # old rows are untouched and the retired time-held id is still recognised
+    assert db.execute('SELECT COUNT(*) FROM session_sets').fetchone()[0] == 3
+    assert flask_app._is_time_based_exercise('workout_a_gym_8')
+    assert not flask_app._is_time_based_exercise('workout_a_gym_0')
+    assert client.get('/').status_code == 200
+
+
+def test_gym_program_definition_is_idempotent_and_writes_nothing(client):
+    db = flask_app.get_db()
+    before = [db.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0]
+              for t in ('workouts', 'workout_exercises', 'sessions', 'session_sets', 'exercise_notes')]
+    flask_app.init_db()
+    flask_app.init_db()
+    after = [db.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0]
+             for t in ('workouts', 'workout_exercises', 'sessions', 'session_sets', 'exercise_notes')]
+    assert before == after
+
+
+def test_gym_supersets_cover_all_exercises_in_order():
+    for key, count in (('workout_a_gym', 7), ('workout_b_gym', 8)):
+        steps = flask_app.AB_WORKOUTS[key]['supersetSteps']
+        flat = [i for step in steps for i in step]
+        assert sorted(flat) == list(range(count))
+        assert flat == list(range(count))  # grouping never reorders the exercises

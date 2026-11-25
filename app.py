@@ -21,10 +21,12 @@ DATABASE_URL = os.environ.get('DATABASE_URL', '/app/data/fitness.db')
 
 VALID_WORKOUT_TYPES = {'workout_a_gym', 'workout_a_home', 'workout_b_gym', 'workout_b_home', 'workout_c_home', 'poci', 'flexibility'}
 
+# Gym program: two full-body sessions (A, B) alternated across sessions.
+# Heavy compounds first, forearm/arms last. Defined once in
+# LIVE_WORKOUT_EXERCISES below; the manual-log lists mirror its order.
 WORKOUT_A_GYM_EXERCISES = [
-    'Squat', 'Machine Chest Press', 'Lat Pulldown', 'Reverse Pec Deck Fly', 'Single-Arm Preacher Curl',
-    'Back Extension', 'Tricep Pushdown (cable)',
-    'Calf Raise (machine)', 'Core Finisher (your choice)'
+    'Squat', 'Smith Machine RDL', 'Machine Chest Press', 'Lat Pulldown',
+    'Chest-Supported Row (machine)', 'Machine Shoulder Press', 'Dumbbell Hammer Curl'
 ]
 WORKOUT_A_HOME_EXERCISES = [
     'Goblet Squat (dumbbell)', 'Decline Push-up', 'Chin-up', 'Incline Y-Raise (dumbbell)',
@@ -32,9 +34,9 @@ WORKOUT_A_HOME_EXERCISES = [
     'Step-Edge Calf Raise (dumbbell)', 'Core Finisher (your choice)'
 ]
 WORKOUT_B_GYM_EXERCISES = [
-    'Smith Machine RDL', 'Upper Chest Fly (cable/pec deck)', 'Chest-Supported Row (machine)',
-    'Hack Squat Machine', 'Overhead Dumbbell Tricep Extension', 'Face Pull',
-    'Machine Bicep Curl (seated)', 'Calf Raise (machine)', 'Core Finisher (your choice)'
+    'Squat', 'Smith Machine RDL', 'Machine Chest Press', 'Lat Pulldown',
+    'Chest-Supported Row (machine)', 'Machine Shoulder Press',
+    'Overhead Dumbbell Tricep Extension', 'Wrist Extension (dumbbell)'
 ]
 WORKOUT_B_HOME_EXERCISES = [
     'Romanian Deadlift (dumbbell)', 'Incline Dumbbell Press', 'Chest-Supported Row (dumbbell)',
@@ -49,6 +51,35 @@ WORKOUT_C_HOME_EXERCISES = [
     'Pike Push-up', 'Wrist Curl (dumbbell)', 'Sit-up / Crunch'
 ]
 
+# Gym exercises. Workouts A and B share the first six moves, so they are
+# defined once. Each carries an explicit stable 'id': logged history
+# (session_sets, exercise_notes, PRs, progression tips) is keyed by exercise
+# id, and the gym lineups were reordered/replaced, so positional ids
+# ('workout_a_gym_3') would have silently re-attached old logs to a different
+# exercise. Ids of moves that were already in the old gym lineups are kept
+# as-is (so their history carries over); new moves get new ids. Retired moves
+# (Reverse Pec Deck Fly, Preacher Curl, Calf Raise, ...) keep their old ids in
+# history only — nothing in the new lineups reuses them.
+_GYM_SQUAT = {
+    'id': 'workout_a_gym_0', 'name': 'Squat', 'sets': 3, 'reps': '8–12', 'youtube': 'https://www.youtube.com/shorts/CsPAsICeRsM',
+    'tip': "Chest up, knees track over toes. Sit back like into a chair.", 'progression_kg': 5}
+_GYM_RDL = {
+    'id': 'workout_b_gym_0', 'name': 'Smith Machine RDL', 'sets': 3, 'reps': '8–12', 'youtube': 'https://www.youtube.com/shorts/Wl4tdsx2Sy8',
+    'tip': "Hinge at the hips, push hips back, keep the bar close to your legs. The fixed bar path means you don't need to balance it — focus on the stretch.", 'progression_kg': 5}
+_GYM_CHEST_PRESS = {
+    'id': 'workout_a_gym_1', 'name': 'Machine Chest Press', 'sets': 3, 'reps': '8–12', 'youtube': 'https://www.youtube.com/shorts/YXjhMV7uz4c',
+    'tip': "Adjust the seat so the handles line up with mid-chest. Press forward without locking out your elbows, squeeze at full extension.", 'progression_kg': 2.5}
+_GYM_LAT_PULLDOWN = {
+    'id': 'workout_a_gym_2', 'name': 'Lat Pulldown', 'sets': 3, 'reps': '8–12', 'youtube': 'https://www.youtube.com/shorts/KlxStcwWHcM',
+    'tip': "Shoulder-width overhand grip, slight backward lean with a fixed torso — no swinging. Drive elbows down and back, lats before arms.", 'progression_kg': 2.5}
+_GYM_ROW = {
+    'id': 'workout_b_gym_2', 'name': 'Chest-Supported Row (machine)', 'sets': 3, 'reps': '8–12', 'youtube': 'https://www.youtube.com/shorts/FTwvmczf7bE',
+    'tip': "Chest pressed into the pad the whole set — no swinging. Drive elbows back and squeeze your shoulder blades together.", 'progression_kg': 2.5}
+# No verified demo video for this one yet — youtube None is supported (Core Finisher did the same).
+_GYM_SHOULDER_PRESS = {
+    'id': 'gym_shoulder_press', 'name': 'Machine Shoulder Press', 'sets': 3, 'reps': '8–12', 'youtube': None,
+    'tip': "Seat set so the handles start at shoulder height. Press straight up without shrugging, stop just short of locking out, control the way down.", 'progression_kg': 2.5}
+
 # progression_kg is the suggested weight jump for the Coach's double-progression
 # tips once every set hits the top of the rep range: 5kg for leg-dominant
 # compounds, 2.5kg for everything else, None for time-held exercises (Plank)
@@ -56,24 +87,14 @@ WORKOUT_C_HOME_EXERCISES = [
 # how this gets capped for lighter/bodyweight loads.
 LIVE_WORKOUT_EXERCISES = {
     'workout_a_gym': [
-        {'name': 'Squat', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/CsPAsICeRsM',
-         'tip': "Chest up, knees track over toes. Sit back like into a chair.", 'progression_kg': 5},
-        {'name': 'Machine Chest Press', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/YXjhMV7uz4c',
-         'tip': "Adjust the seat so the handles line up with mid-chest. Press forward without locking out your elbows, squeeze at full extension.", 'progression_kg': 2.5},
-        {'name': 'Lat Pulldown', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/KlxStcwWHcM',
-         'tip': "Shoulder-width overhand grip, slight backward lean with a fixed torso — no swinging. Drive elbows down and back, lats before arms.", 'progression_kg': 2.5},
-        {'name': 'Reverse Pec Deck Fly', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/v0CxZlWX9zQ',
-         'tip': "Chest against the pad, arms parallel to the floor. Squeeze your shoulder blades together as you open your arms — no momentum.", 'progression_kg': 2.5},
-        {'name': 'Single-Arm Preacher Curl', 'sets': 2, 'reps': '10–12 each arm', 'youtube': 'https://www.youtube.com/shorts/a-6eb-bmgHI',
-         'tip': "Upper arm braced flat against the pad, one arm at a time. Full extension at the bottom, squeeze at the top, then switch arms.", 'progression_kg': 2.5},
-        {'name': 'Back Extension', 'sets': 2, 'reps': '12', 'youtube': 'https://www.youtube.com/shorts/P489_62b8JU',
-         'tip': "Hips on the pad, rise until your body forms a straight line — don't hyperextend at the top.", 'progression_kg': 2.5},
-        {'name': 'Tricep Pushdown (cable)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/aHfbuBf1TJk',
-         'tip': "Keep elbows pinned at your sides, full extension at the bottom.", 'progression_kg': 2.5},
-        {'name': 'Calf Raise (machine)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/yQZDGjL-xT4',
-         'tip': "Full stretch at the bottom, pause and squeeze hard at the top.", 'progression_kg': 2.5},
-        {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
-         'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
+        _GYM_SQUAT,
+        _GYM_RDL,
+        _GYM_CHEST_PRESS,
+        _GYM_LAT_PULLDOWN,
+        _GYM_ROW,
+        _GYM_SHOULDER_PRESS,
+        {'id': 'gym_hammer_curl', 'name': 'Dumbbell Hammer Curl', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/K9LiwcGuqA0',
+         'tip': "Neutral grip (palms facing in) the whole way — works biceps and forearm. Elbows pinned, no swinging.", 'progression_kg': 2.5},
     ],
     'workout_a_home': [
         {'name': 'Goblet Squat (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/wjkoL-CagYE',
@@ -96,24 +117,16 @@ LIVE_WORKOUT_EXERCISES = {
          'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
     ],
     'workout_b_gym': [
-        {'name': 'Smith Machine RDL', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/Wl4tdsx2Sy8',
-         'tip': "Hinge at the hips, push hips back, keep the bar close to your legs. The fixed bar path means you don't need to balance it — focus on the stretch.", 'progression_kg': 5},
-        {'name': 'Upper Chest Fly (cable/pec deck)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/MEZ8UPbOO08',
-         'tip': "Slight bend in elbows, squeeze at the top, control the negative.", 'progression_kg': 2.5},
-        {'name': 'Chest-Supported Row (machine)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/FTwvmczf7bE',
-         'tip': "Chest pressed into the pad the whole set — no swinging. Drive elbows back and squeeze your shoulder blades together.", 'progression_kg': 2.5},
-        {'name': 'Hack Squat Machine', 'sets': 3, 'reps': '8–10', 'youtube': 'https://www.youtube.com/shorts/fl4PtdimZSk',
-         'tip': "Feet shoulder-width on the platform, knees tracking over your toes. Don't let your lower back round at the bottom.", 'progression_kg': 5},
-        {'name': 'Overhead Dumbbell Tricep Extension', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/J565P8FzJXA',
+        _GYM_SQUAT,
+        _GYM_RDL,
+        _GYM_CHEST_PRESS,
+        _GYM_LAT_PULLDOWN,
+        _GYM_ROW,
+        _GYM_SHOULDER_PRESS,
+        {'id': 'workout_b_gym_4', 'name': 'Overhead Dumbbell Tricep Extension', 'sets': 3, 'reps': '12–15', 'youtube': 'https://www.youtube.com/shorts/J565P8FzJXA',
          'tip': "Elbows pointed at the ceiling and fixed — only your forearms move. Lower behind your head for a full stretch, then extend back up.", 'progression_kg': 2.5},
-        {'name': 'Face Pull', 'sets': 2, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/sHSY0Ao8QHs',
-         'tip': "Pull the rope to your forehead, elbows high and wide. Squeeze your shoulder blades together at the end.", 'progression_kg': 2.5},
-        {'name': 'Machine Bicep Curl (seated)', 'sets': 2, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/1qAcqvUx6bE',
-         'tip': "Upper arms flat against the pad the whole set — no swinging. Squeeze at the top, control the way down.", 'progression_kg': 2.5},
-        {'name': 'Calf Raise (machine)', 'sets': 3, 'reps': '15–20', 'youtube': 'https://www.youtube.com/shorts/yQZDGjL-xT4',
-         'tip': "Full stretch at the bottom, pause and squeeze hard at the top.", 'progression_kg': 2.5},
-        {'name': 'Core Finisher (your choice)', 'sets': 2, 'reps': '15–20 or 30–60 sec', 'youtube': None,
-         'tip': "Pick any ab exercise and vary it session to session — plank, crunches, leg raises, Russian twists.", 'progression_kg': None},
+        {'id': 'gym_wrist_extension', 'name': 'Wrist Extension (dumbbell)', 'sets': 2, 'reps': '15', 'youtube': None,
+         'tip': "Start light. Forearm resting palm-down on your knee or a bench, wrist hanging off the edge — lift the back of your hand up through the wrist only. Stop if you feel numbness or tingling in your fingers.", 'progression_kg': 1},
     ],
     'workout_b_home': [
         {'name': 'Romanian Deadlift (dumbbell)', 'sets': 3, 'reps': '10–12', 'youtube': 'https://www.youtube.com/shorts/vnEANU7BqqY',
@@ -220,14 +233,14 @@ def _parse_rep_ceiling(reps_str):
 # agonist-antagonist paired sets (roughly halves rest time with no loss in
 # strength/hypertrophy outcomes vs straight sets): push+pull (chest/back),
 # and elbow flexion+extension (biceps/triceps), plus the low-fatigue
-# calf+core finisher pair. Deliberately excludes the heavy compound lift
-# (index 0: Squat/Deadlift) and the single shoulder-isolation exercise
-# (index 3), which have no antagonist partner in a 9-exercise session
-# without forcing an unrelated pairing — see _superset_steps().
+# calf+core finisher pair. Deliberately excludes the heavy lower-body
+# compounds, which have no antagonist partner — see _superset_steps().
+# Gym A/B (full body): chest press + lat pulldown (push/pull), then row +
+# shoulder press (pull/push) — the arm/forearm work at the end stays solo.
 SUPERSET_PAIRS = {
-    'workout_a_gym': [(1, 2), (4, 6), (7, 8)],
+    'workout_a_gym': [(2, 3), (4, 5)],
     'workout_a_home': [(1, 2), (4, 6), (7, 8)],
-    'workout_b_gym': [(1, 2), (4, 6), (7, 8)],
+    'workout_b_gym': [(2, 3), (4, 5)],
     'workout_b_home': [(1, 2), (4, 6), (7, 8)],
 }
 
@@ -259,6 +272,12 @@ def _superset_steps(key, count):
     return steps
 
 
+def _exercise_id(key, i, ex):
+    """Stable id history is keyed by: an exercise's explicit 'id' if it has
+    one (gym), else the positional '<workout_key>_<index>' (home workouts)."""
+    return ex.get('id') or f'{key}_{i}'
+
+
 def _build_ab_workouts():
     out = {}
     for key, exercises in LIVE_WORKOUT_EXERCISES.items():
@@ -266,7 +285,7 @@ def _build_ab_workouts():
             'label': WORKOUT_TYPE_LABELS[key],
             'exercises': [
                 {
-                    'id': f'{key}_{i}',
+                    'id': _exercise_id(key, i, ex),
                     'name': ex['name'],
                     'target_sets': ex['sets'],
                     'target_reps': ex['reps'],
@@ -779,16 +798,20 @@ def _progress_chart_bars(db, today, exercise_id, metric):
     return out
 
 
+# Retired gym exercise ids that were time-held (the old gym Core Finisher), so
+# their logged history is still recognised as time-based after the gym
+# lineups were replaced. See the note above _GYM_SQUAT.
+_RETIRED_TIME_BASED_IDS = {'workout_a_gym_8', 'workout_b_gym_8'}
+
+
 def _is_time_based_exercise(exercise_id):
-    workout_key, _, idx_str = exercise_id.rpartition('_')
-    if not idx_str.isdigit() or workout_key not in LIVE_WORKOUT_EXERCISES:
-        return False
-    exercises = LIVE_WORKOUT_EXERCISES[workout_key]
-    idx = int(idx_str)
-    if idx >= len(exercises):
-        return False
-    reps_str = exercises[idx]['reps']
-    return 'sec' in reps_str or 'min' in reps_str
+    if exercise_id in _RETIRED_TIME_BASED_IDS:
+        return True
+    for key, exercises in LIVE_WORKOUT_EXERCISES.items():
+        for i, ex in enumerate(exercises):
+            if _exercise_id(key, i, ex) == exercise_id:
+                return 'sec' in ex['reps'] or 'min' in ex['reps']
+    return False
 
 
 def _all_progress_charts(db, today):
@@ -947,7 +970,7 @@ def _build_coach_data(db, today):
             if ex['name'] in seen_names:
                 continue  # gym/home variants of the same move (e.g. Pull-up) share a name — show once
             ceiling = _parse_rep_ceiling(ex['reps'])
-            tip = _progression_tip(db, f'{key}_{i}', ceiling, ex.get('progression_kg'))
+            tip = _progression_tip(db, _exercise_id(key, i, ex), ceiling, ex.get('progression_kg'))
             if tip is None:
                 continue  # never logged, or not a weight-progressed (time-held) exercise
             seen_names.add(ex['name'])
